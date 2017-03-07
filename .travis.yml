@@ -1,0 +1,14 @@
+notifications:
+  email: false
+
+language:
+  - cpp
+
+compiler:
+  - gcc
+
+os:
+  - linux
+
+script:
+  - source build.sh
