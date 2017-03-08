@@ -1,26 +1,29 @@
 notifications:
   email: false
 
+os:
+  - linux
+  
 language:
   - cpp
   
+branches:
+  only:
+    - master
+  
 compiler:
-  - gcc
+  - gcc-5
 
 addons:
   apt:
     sources:
       - ubuntu-toolchain-r-test
     packages:
-      - gcc-4.8
-      - g++-4.8
-      - libusb-1.0-0-dev
+      - gcc-5
+      - g++-5
 
 before_install:
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then export CXX=g++-4.8; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then export CXX="g++-5" CC="gcc-5"; fi
   
-os:
-  - linux
-
 script:
   - source build.sh
