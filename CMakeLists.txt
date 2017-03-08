@@ -10,9 +10,4 @@ if(OPENMP_FOUND)
     set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}    ${OpenMP_C_FLAGS}")
 endif()
 
-message(STATUS ${CMAKE_C_FLAGS})
-
-get_filename_component(DIR_NAME ${CMAKE_CURRENT_LIST_DIR} NAME)
-set(MODULE "${DIR_NAME}")
-
 add_subdirectory(modules)
