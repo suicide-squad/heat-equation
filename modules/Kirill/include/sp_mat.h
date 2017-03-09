@@ -2,8 +2,8 @@
 // Created by kirill on 23.10.16.
 //
 
-#ifndef SPARSE_SPARSE_H
-#define SPARSE_SPARSE_H
+#ifndef HEAT_EQUATION_SPARSE_SPARSE_H
+#define HEAT_EQUATION_SPARSE_SPARSE_H
 
 #define ENABLE_PARALLEL 1
 //#define _COMPLEX_
@@ -48,4 +48,4 @@ TYPE procedure(spMatrix mat, int i, int j);
 #endif
 
 
-#endif //SPARSE_SPARSE_H
+#endif //HEAT_EQUATION_SPARSE_SPARSE_H

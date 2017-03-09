@@ -6,9 +6,8 @@
 #define HEAT_EQUATION_PARSER_H
 
 #define OK 0
-#define NO_FILE -100
-#define READING_ERROR -101
-
+#define NO_FILE 100
+#define READING_ERROR 101
 
 typedef struct {
   double XSTART;
@@ -27,7 +26,7 @@ typedef struct {
   int BC;
 } Setting;
 
-int readSetting(char *path, Setting *setting);
-void readFunction(char path[], Setting* setting);
+int readSetting(const char *path, Setting *setting);
+int readFunction(const char *path, double **function, size_t dim);
 
 #endif //HEAT_EQUATION_PARSER_H

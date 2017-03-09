@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <sp_mat.h>
 
 #include "sp_mat.h"
 
