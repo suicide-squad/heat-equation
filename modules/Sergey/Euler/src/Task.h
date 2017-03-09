@@ -6,6 +6,7 @@
 #define EULER_TASK_H
 
 #include <string>
+#include <cmath>
 
 using std::string;
 
@@ -15,6 +16,7 @@ public:
     int initTaskUsingFile(string filename);
     int initMemory(int size = nX);
     void printTaskData();
+    void preparationData();
 
     int     sizetime;
     int     currTime, prevTime;
@@ -28,6 +30,8 @@ private:
     int     nX;             // count of initial elements
     double  tStart, tFinish;
     double  dt;
+
+    double  stepSize;       // distance between two dot
 };
 
 

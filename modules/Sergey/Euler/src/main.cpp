@@ -6,8 +6,6 @@ const int ENABLE_PARALLEL = 0;
 
 using std::string;
 
-void readfile();
-
 int main(int argc, char** argv) {
 
     // Timing variables
@@ -17,28 +15,7 @@ int main(int argc, char** argv) {
     Task task;
     task.initTaskUsingFile(filename);
 
-
-    //double step = 0.0; ??
-
-
-
-    // Read file
-    for (int i = 1; i <= nX; i++) {
-        fscanf(infile, "%lf\n", &vect[0][i]);
-    }
-    fclose(infile);
-
     time_S = omp_get_wtime();
-
-    step = (fabs(xStart) + fabs(xEnd)) / nX;      // calculate step
-
-    prevTime = 0;
-    currTime = 1;
-
-    vect[0][0] = vect[0][1];
-    vect[0][nX+1] = vect[0][nX];
-
-    double timesize = (tFinal - tStart) / dt;
 
     //printf("%.6lf\n", timedt);
     string consoleInput = "";

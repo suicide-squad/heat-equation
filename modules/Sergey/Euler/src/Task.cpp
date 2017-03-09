@@ -4,6 +4,8 @@
 
 #include "Task.h"
 
+Task::Task() {}
+
 int Task::initTaskUsingFile(string filename) {
     FILE *infile = fopen(filename.c_str(), "r");
 
@@ -32,8 +34,6 @@ int Task::initTaskUsingFile(string filename) {
     return 0;
 }
 
-Task::Task() {}
-
 void Task::printTaskData() {
     printf("xStart %lf; xEnd %lf; sigma %lf; nX %d; tStart %lf; tFinish %lf; dt %.10lf;\n",
            xStart, xEnd, sigma, nX, tStart, tFinish, dt);
@@ -45,4 +45,17 @@ int Task::initMemory(int size) {
     vect[1] = new double[size + 2];
 
     return 0;
+}
+
+void Task::preparationData() {
+    stepSize = (fabs(xStart) + fabs(xEnd)) / nX;
+
+    prevTime = 0;
+    currTime = 1;
+
+    vect[0][0] = vect[0][1];
+    vect[0][nX+1] = vect[0][nX];
+
+//    double timesize = (tFinal - tStart) / dt;
+
 }
