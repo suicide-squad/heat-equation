@@ -27,6 +27,7 @@ typedef struct {
 } Setting;
 
 int readSetting(const char *path, Setting *setting);
-int readFunction(const char *path, double **function, size_t dim);
+int readFunction(const char *path, double **function, size_t dim, size_t NX);
+int writeFunctionX(const char *path, double *function, size_t dim, size_t NX);
 
 #endif //HEAT_EQUATION_PARSER_H

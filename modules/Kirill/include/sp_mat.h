@@ -43,6 +43,14 @@ void sumV(size_t N, double h, TYPE **result, TYPE *U, TYPE *k1, TYPE *k2, TYPE *
 void printSpMat(spMatrix mat);
 TYPE procedure(spMatrix mat, int i, int j);
 
+void mult(double **result, double **mat, double *vec, size_t dim) {
+  memset(*result, 0, dim*sizeof(double));
+  for (int x = 0; x < dim; x++) {
+    for (int i = 0;i < dim;i++)
+      (*result)[x]+=mat[x][i]*vec[i];
+  }
+}
+
 #ifdef __cplusplus
 }
 #endif

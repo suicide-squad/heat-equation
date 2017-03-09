@@ -29,13 +29,26 @@ int readSetting(const char *path, Setting *setting) {
   return OK;
 }
 
-int readFunction(const char *path, double **function, size_t dim) {
+int readFunction(const char *path, double **function, size_t dim, size_t NX) {
   FILE *fp;
   if ( !(fp = fopen(path, "r")) )
     return NO_FILE;
 
   for (int i = 0; i < dim; i++)
-    if ( !fscanf(fp, "%lf\n", (*function) + i) ) return READING_ERROR;
+    if ( !fscanf(fp, "%lf\n", (*function) + i)
+        && i%(NX + 2)!=0 && i%(NX + 2) != NX + 1 )
+      return READING_ERROR;
 
+  return OK;
+}
+
+int writeFunctionX(const char *path, double *function, size_t dim, size_t NX) {
+  FILE *fp;
+  fp = fopen(path, "w");
+
+  for (int i = 1; i < NX + 1; i++)
+    fprintf(fp, "%.15le\n", function[i]);
+
+  fclose(fp);
   return OK;
 }
