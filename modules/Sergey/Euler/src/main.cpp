@@ -1,55 +1,26 @@
 #include <iostream>
 #include <omp.h>
-#include <cmath>
+#include "Task.h"
 
-const int ENABLE_PARALLEL = 1;
+const int ENABLE_PARALLEL = 0;
 
 using std::string;
+
+void readfile();
 
 int main(int argc, char** argv) {
 
     // Timing variables
-    double time_S, time_E;  // Time for allocate memory
-
+    double time_S, time_E;
     string filename = "../../../../../initial/INPUT.txt";
-    FILE *infile = fopen(filename.c_str(), "r");
 
-    if (infile == NULL) {
-        printf("File reading error. Try to relocate input file\n");
-        exit(0);
-    }
+    Task task;
+    task.initTaskUsingFile(filename);
 
-    double xStart = 0.0, xEnd = 0.0;
-    double sigma = 0.0;
 
-    int bc = 0; // Not use
+    //double step = 0.0; ??
 
-    int nX = 1;
-    double tStart = 0.0, tFinal = 0.0;
-    double dt = 0.0;
 
-    int i, j;
-    int sizeTime = 0;
-    int currTime, prevTime;
-
-    double step = 0.0;
-
-    //  File reading
-    fscanf(infile, "XSTART=%lf\n", &xStart);    // start coordinate
-    fscanf(infile, "XEND=%lf\n", &xEnd);        // end coordinate
-    fscanf(infile, "SIGMA=%lf\n", &sigma);      // coef of heat conduction
-    fscanf(infile, "NX=%d\n", &nX);             // count of initial elements?
-    fscanf(infile, "TSTART=%lf\n", &tStart);    // start time
-    fscanf(infile, "TFINISH=%lf\n", &tFinal);   // finish time
-    fscanf(infile, "dt=%lf\n", &dt);            // delta of time difference
-    fscanf(infile, "BC=%d\n", &bc);         // Not using right now
-
-//    printf("xStart %lf; xEnd %lf; sigma %lf; nX %d; tStart %lf; tFinal %lf; dt %.10lf;\n",
-//           xStart, xEnd, sigma, nX, tStart, tFinal, dt);
-
-    double** vect = new double*[2];
-    vect[0] = new double[nX + 2];
-    vect[1] = new double[nX + 2];
 
     // Read file
     for (int i = 1; i <= nX; i++) {
@@ -85,7 +56,7 @@ int main(int argc, char** argv) {
 
         omp_set_num_threads(4);
         {
-#pragma omp parallel for if (ENABLE_PARALLEL)
+            #pragma omp parallel for if (ENABLE_PARALLEL)
             for (int i = 1; i <= nX; i++) {
                 vect[currTime][i] = expr * (vect[prevTime][i + 1] - 2 * vect[prevTime][i] + vect[prevTime][i - 1])
                                     + vect[prevTime][i];
