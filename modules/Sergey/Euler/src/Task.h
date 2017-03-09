@@ -14,7 +14,7 @@ class Task {
 public:
     Task();
     int initTaskUsingFile(string filename);
-    int initMemory(int size = nX);
+    int initMemory();
     void printTaskData();
     void preparationData();
 
@@ -24,10 +24,15 @@ public:
 private:
     double** vect;
     double  xStart, xEnd;   // range
+    double  yStart, yEnd;
+    double  zStart, zEnd;
     double  sigma;          //
     int     bc;             // not used
 
     int     nX;             // count of initial elements
+    int     nY;
+    int     nZ;
+
     double  tStart, tFinish;
     double  dt;
 
