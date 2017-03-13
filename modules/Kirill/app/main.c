@@ -29,6 +29,10 @@ int main() {
 
   error = readFunction(pathFunction, &function, dim, setting.NX);
 
+//  for (int i = 0; i < dim; i++) {
+//    printf("%.0lf\n", function[i]);
+//  }
+
   if (error != OK) return error;
 
   size_t sizeTime = (size_t)((setting.TFINISH - setting.TSTART) / setting.dt);
