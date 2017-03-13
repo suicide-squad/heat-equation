@@ -13,7 +13,7 @@ using std::string;
 class Task {
 public:
     Task();
-    int initTaskUsingFile(string filename);
+    int initTaskUsingFile(string settingFile, string functionFile);
     int initMemory();
     void preparationData();
     void setData(double data, int x, int y, int z, int timeVect = 0);
@@ -22,6 +22,9 @@ public:
 
     void printTaskData();
     void printVect(int timeVect = 0);
+
+    // debug function
+    void printVectFile(string filename, int timeVect = 0);
 
     int     sizetime;
     int     currTime, prevTime;

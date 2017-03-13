@@ -10,26 +10,27 @@ int main(int argc, char** argv) {
 
     // Timing variables
     double time_S, time_E;
-    string filename = "../../../../../initial/INPUT.txt";
+    string functionFile = "./../../../../../initial/function.txt";
+    string settingFile = "./../../../../../initial/setting.ini";
 
     Task task;
-    task.initTaskUsingFile(filename);
+    task.initTaskUsingFile(settingFile, functionFile);
 
     time_S = omp_get_wtime();
-
+    task.printVectFile("kek", 0);
 
     // TODO вынести этот блок в отдельную функцию
-    //printf("%.6lf\n", timedt);
-    string consoleInput = "";
-    if (argv[1] != 0) {
-        timesize = pow(2, atof(argv[1]));
-        consoleInput = argv[1];
-    }
+//    //printf("%.6lf\n", timedt);
+//    string consoleInput = "";
+//    if (argv[1] != 0) {
+//        timesize = pow(2, atof(argv[1]));
+//        consoleInput = argv[1];
+//    }
 
     // TODO а этот ещё в отдельную
-    printf("1/timesize:\t %.10lf\n", 1/timesize);
-    printf("timesize:\t %.0f\n", timesize);
-    printf("dt:\t\t %.2e\n", 1/timesize * (tFinal - tStart));
+//    printf("1/timesize:\t %.10lf\n", 1/timesize);
+//    printf("timesize:\t %.0f\n", timesize);
+//    printf("dt:\t\t %.2e\n", 1/timesize * (tFinal - tStart));
 
 
     // TODO тут скорей будет новый алгоритм
