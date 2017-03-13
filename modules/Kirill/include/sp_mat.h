@@ -31,25 +31,22 @@ typedef struct {
   int* rowIndex;    // Место каждого ненулевого элемента в каждой строке
   size_t nz;        // Количество ненулевых
   size_t nRows;     // Количество строк
-} spMatrix;
+} SpMatrix;
 
-void initSpMat(spMatrix* mat, size_t nz, size_t nRows);
-void freeSpMat(spMatrix* mat);
+void initSpMat(SpMatrix* mat, size_t nz, size_t nRows);
+void freeSpMat(SpMatrix* mat);
 
-void multMV(TYPE** result, spMatrix matrix, TYPE* vector);
+// Умножение разреженной матрицы на вектор
+void multMV(TYPE** result, SpMatrix matrix, TYPE* vector);
 
+// Суммирование векторов для рунге-кутты
 void sumV(size_t N, double h, TYPE **result, TYPE *U, TYPE *k1, TYPE *k2, TYPE *k3, TYPE *k4);
 
-void printSpMat(spMatrix mat);
-TYPE procedure(spMatrix mat, int i, int j);
+void printSpMat(SpMatrix mat);
+TYPE procedure(SpMatrix mat, int i, int j);
 
-void mult(double **result, double **mat, double *vec, size_t dim) {
-  memset(*result, 0, dim*sizeof(double));
-  for (int x = 0; x < dim; x++) {
-    for (int i = 0;i < dim;i++)
-      (*result)[x]+=mat[x][i]*vec[i];
-  }
-}
+// Умножение плотной матрицы на вектор
+void denseMult(double **result, double **mat, double *vec, size_t dim);
 
 #ifdef __cplusplus
 }

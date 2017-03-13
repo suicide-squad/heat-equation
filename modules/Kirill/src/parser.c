@@ -42,7 +42,7 @@ int readFunction(const char *path, double **function, size_t dim, size_t NX) {
   return OK;
 }
 
-int writeFunctionX(const char *path, double *function, size_t dim, size_t NX) {
+void writeFunctionX(const char *path, double *function, size_t NX) {
   FILE *fp;
   fp = fopen(path, "w");
 
@@ -50,5 +50,4 @@ int writeFunctionX(const char *path, double *function, size_t dim, size_t NX) {
     fprintf(fp, "%.15le\n", function[i]);
 
   fclose(fp);
-  return OK;
 }
