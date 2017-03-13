@@ -1,24 +1,26 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sp_mat.h>
 
 #include "sp_mat.h"
 
-void initSpMat(spMatrix *mat, size_t nz, size_t nRows) {
+void initSpMat(SpMatrix *mat, size_t nz, size_t nRows) {
   mat->nz = nz;
   mat->nRows = nRows;
   mat->value = (TYPE *)malloc(sizeof(TYPE) * nz);
   mat->col = (int *)malloc(sizeof(int) * nz);
   mat->rowIndex = (int *)malloc(sizeof(int) * (nRows) + 1);
+  memset(mat->rowIndex, 0, nRows + 1);
 }
 
-void freeSpMat(spMatrix* mat) {
+void freeSpMat(SpMatrix* mat) {
   free(mat->value);
   free(mat->col);
   free(mat->rowIndex);
 }
 
-void multMV(TYPE** result, spMatrix mat, TYPE* vec) {
+void multMV(TYPE** result, SpMatrix mat, TYPE* vec) {
   TYPE localSum;
   #pragma omp parallel private(localSum) num_threads(2) if (ENABLE_PARALLEL)
   {
@@ -39,25 +41,32 @@ void sumV(size_t N, double h, TYPE **result, TYPE *U, TYPE *k1, TYPE *k2, TYPE *
 }
 
 
-void printSpMat(spMatrix mat) {
+void printSpMat(SpMatrix mat) {
   for (int i = 0; i < mat.nRows; i++) {
     for (int j = 0; j < mat.nRows; j++)
-      printf("%3.7lf\t", procedure(mat, i, j));
+      printf("%.0lf", procedure(mat, i, j));
     printf("\n");
   }
 }
 
-TYPE procedure(spMatrix mat, int i, int j) {
+TYPE procedure(SpMatrix mat, int i, int j) {
   TYPE result = 0;
   int N1 = mat.rowIndex[i];
   int N2 = mat.rowIndex[i+1];
-  for(int k = N1; k < N2; k++)
-  {
-    if (mat.col[k] == j)
-    {
+  for(int k = N1; k < N2; k++) {
+    if (mat.col[k] == j) {
       result = mat.value[k];
       break;
     }
   }
   return result;
+}
+
+
+void denseMult(double **result, double **mat, double *vec, size_t dim) {
+  memset(*result, 0, dim*sizeof(double));
+  for (int x = 0; x < dim; x++) {
+    for (int i = 0;i < dim;i++)
+      (*result)[x]+=mat[x][i]*vec[i];
+  }
 }
