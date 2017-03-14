@@ -79,7 +79,7 @@ void fillMatrix3d6Expr(SparseMatrix &sp, TaskExpressions &taskexpr, int sizeX, i
             ++index;
 
             // kek
-            for (int x = 1; x < sizeX; ++x) {
+            for (int x = 1; x < sizeX + 1; ++x) {
                 // Z first
                 sp.values[index] = taskexpr.z1;
                 sp.columns[index] = z == 0 ?
@@ -118,10 +118,9 @@ void fillMatrix3d6Expr(SparseMatrix &sp, TaskExpressions &taskexpr, int sizeX, i
 
                 // Z second
                 sp.values[index] = taskexpr.z1;
-                sp.columns[index] = z == 0 ?
+                sp.columns[index] = z == sizeZ - 1 ?
                                     x + sectionStart - realSizeZ * (sizeZ - 1) :
                                     x + sectionStart + realSizeZ;
-                sp.pointerB[pIndex++] = index;
                 ++index;
 
             }
@@ -130,6 +129,7 @@ void fillMatrix3d6Expr(SparseMatrix &sp, TaskExpressions &taskexpr, int sizeX, i
             sp.values[index] = 1;
             sp.columns[index] = sectionStart + realsizeY - 1;//z * sizeZ + y * sizeY + sizeX - 1;
             sp.pointerB[pIndex++] = index;
+            ++index;
         }
     }
 
@@ -143,16 +143,22 @@ void printVectors(SparseMatrix &sp) {
     }
     printf("\n");
 
-    printf("columns\n");
-    for (int i = 0; i < sp._size; ++i) {
-        printf("%d ", sp.columns[i]);
-    }
-    printf("\n");
+//    FILE *outfile = fopen("kekus", "w");
+//    int pb = 0;
+//    fprintf(outfile,"columns\n");
+//    for (int i = 0; i < sp._size; ++i) {
+//        if (i == sp.pointerB[pb]) {
+//            fprintf(outfile, "==========\n");
+//            pb++;
+//        }
+//        fprintf(outfile, "%d ", sp.columns[i]);
+//    }
+//    printf("\n");
 
-    printf("pointerB\n");
-    for (int i = 0; i < sp._rows + 1; ++i) {
-        printf("%d ", sp.pointerB[i]);
-    }
-    printf("\n");
+//    printf("pointerB\n");
+//    for (int i = 0; i < sp._rows + 1; ++i) {
+//        printf("%d ", sp.pointerB[i]);
+//    }
+//    printf("\n");
 }
 
