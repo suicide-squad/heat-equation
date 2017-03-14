@@ -6,6 +6,7 @@
 #define SPARSEMATRIX_SPARSEMATRIX_H
 #include <omp.h>
 #include <cstdio>
+#include "Task.h"
 
 const int ENABLE_PARALLEL = 1;
 
@@ -13,13 +14,17 @@ typedef struct SparseMatrix {
     int _size;
     int _rows;
     double *values;
-    int *columns;
-    int *pointerB;
-} SpaceMatrix;
+    int *columns;   // какой столбец
+    int *pointerB;  // указатель на начало строки
+};
 
 void fillMatrix2Expr(SparseMatrix &sp, int size, double expr1, double expr2);
+
+void fillMatrix3d6Expr(SparseMatrix &sp, TaskExpressions &taskexpr, int sizeX, int sizeY, int sizeZ);
+
 void multiplicateVector(SparseMatrix &sp, double *&vect, double *&result, int size);
 void spMatrixInit(SparseMatrix &sp, int size, int rows);
 void printVectors(SparseMatrix &sp);
+
 
 #endif //SPARSEMATRIX_SPARSEMATRIX_H

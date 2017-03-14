@@ -4,7 +4,6 @@
 
 #include "SparseMatrix.h"
 
-
 void spMatrixInit(SparseMatrix &sp, int size, int rows) {
     sp._size = size;
     sp._rows = rows;
@@ -60,6 +59,75 @@ void fillMatrix2Expr(SparseMatrix &sp, int size, double expr1, double expr2) {
     sp.pointerB[pIndex] = index + 1;   //end
 }
 
+void fillMatrix3d6Expr(SparseMatrix &sp, TaskExpressions &taskexpr, int sizeX, int sizeY, int sizeZ) {
+    int realSizeZ = sizeX * sizeY;
+    int realsizeY = sizeX;
+    int index = 0;
+    int pIndex = 0;
+
+    int size = (sizeX + 2) * (sizeY) * (sizeZ);
+
+
+    int sectionStart = 0;
+    for (int z = 0; z < sizeZ; ++z) {
+        for (int y = 0; y < sizeY ; ++y) {
+            sectionStart = z * realSizeZ + y * realsizeY;
+            // boundaries
+            sp.values[index] = 1;
+            sp.columns[index] = sectionStart;
+            sp.pointerB[pIndex++] = index;
+            ++index;
+
+            // kek
+            for (int x = 1; x < sizeX; ++x) {
+                // Z first
+                sp.values[index] = taskexpr.z1;
+                sp.columns[index] = z == 0 ?
+                                    x + sectionStart + realSizeZ * (sizeZ - 1) :
+                                    x + sectionStart - realSizeZ;
+                sp.pointerB[pIndex++] = index;
+                ++index;
+
+
+                // Y first
+                sp.values[index] = taskexpr.y1;
+                sp.columns[index] = y == 0 ?
+                                    x + sectionStart + realsizeY * (sizeY - 1) :
+                                    x + sectionStart - realsizeY;
+                ++index;
+
+                // X Group center
+                sp.values[index] = taskexpr.x1;
+                sp.columns[index] = x - 1;
+                ++index;
+
+                sp.values[index] = taskexpr.x2Comp;
+                sp.columns[index] = x;
+                ++index;
+
+                sp.values[index] = taskexpr.x1;
+                sp.columns[index] = x + 1;
+                ++index;
+
+                // Y second
+                sp.values[index] = taskexpr.y1;
+                sp.columns[index] = y == sizeY - 1?
+                                    x + sectionStart - realsizeY * (sizeY - 1) :
+                                    x + sectionStart + realsizeY;
+                ++index;
+
+                // Z second
+            }
+
+            // boundaries end
+            sp.values[index] = 1;
+            sp.columns[index] = z * sizeZ + y * sizeY + sizeX - 1;
+            sp.pointerB[pIndex++] = index;
+        }
+    }
+
+    sp.pointerB[pIndex] = index + 1;   //end
+}
 
 void printVectors(SparseMatrix &sp) {
     printf("values\n");
@@ -80,3 +148,4 @@ void printVectors(SparseMatrix &sp) {
     }
     printf("\n");
 }
+

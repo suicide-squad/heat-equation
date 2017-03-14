@@ -7,27 +7,39 @@
 
 #include <string>
 #include <cmath>
+#include "SparseMatrix.h"
 
 using std::string;
 
 class Task {
 public:
     Task();
+
+    // first step
     int initTaskUsingFile(string settingFile, string functionFile);
     int initMemory();
     void preparationData();
-    void setData(double data, int x, int y, int z, int timeVect = 0);
 
+    // get and set
+    void setData(double data, int x, int y, int z, int timeVect = 0);
     double getData(int x, int y, int z, int timeVect = 0);
 
+    // Transform
+    void createMatrix(TaskExpressions &taskexpr);
+    void setTaskExpr(TaskExpressions &task);
+
+    // Print function
     void printTaskData();
     void printVect(int timeVect = 0);
 
     // debug function
     void printVectFile(string filename, int timeVect = 0);
 
-    int     sizetime;
     int     currTime, prevTime;
+
+    int     nX;             // count of initial elements
+    int     nY;
+    int     nZ;
 
 private:
     double** vect;
@@ -35,19 +47,32 @@ private:
     double  yStart, yEnd;
     double  zStart, zEnd;
     double  sigma;          //
-    int     bc;             // not used
 
-    int     nX;             // count of initial elements
-    int     nY;
-    int     nZ;
+    int     bc;             // not used
 
     double  tStart, tFinish;
     double  dt;
 
-    double  stepSize;       // distance between two dot
+    double  timeStepX;       // time time between calculating
+    double  timeStepY;
+    double  timeStepZ;
 
     int fullVectSize;
+
+    // Sparse Matrix
+    SparseMatrix matrix;
+
 };
 
+typedef struct TaskExpressions {
+    double x1;
+    double x2Comp;
+
+    double y1;
+//    double y2;
+
+    double z1;
+//    double z2;
+};
 
 #endif //EULER_TASK_H

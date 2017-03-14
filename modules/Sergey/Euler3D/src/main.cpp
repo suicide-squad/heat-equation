@@ -2,8 +2,6 @@
 #include <omp.h>
 #include "Task.h"
 
-const int ENABLE_PARALLEL = 0;
-
 using std::string;
 
 int main(int argc, char** argv) {
@@ -17,7 +15,13 @@ int main(int argc, char** argv) {
     task.initTaskUsingFile(settingFile, functionFile);
 
     time_S = omp_get_wtime();
-    task.printVectFile("kek", 0);
+
+    TaskExpressions taskexpr;
+    task.setTaskExpr(taskexpr);
+
+    task.createMatrix(taskexpr);
+
+
 
     // TODO вынести этот блок в отдельную функцию
 //    //printf("%.6lf\n", timedt);

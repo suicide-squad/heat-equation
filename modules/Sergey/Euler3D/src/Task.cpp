@@ -88,7 +88,9 @@ int Task::initMemory() {
 }
 
 void Task::preparationData() {
-    stepSize = (fabs(xStart) + fabs(xEnd)) / nX;
+    timeStepX = (fabs(xStart) + fabs(xEnd)) / nX;
+    timeStepY = (fabs(xStart) + fabs(xEnd)) / nY;
+    timeStepZ = (fabs(xStart) + fabs(xEnd)) / nZ;
 
     prevTime = 0;
     currTime = 1;
@@ -121,3 +123,18 @@ void Task::printVectFile(string filename, int timeVect) {
         fprintf(outfile, "%lf\n", vect[timeVect][i]);
     }
 }
+
+void Task::createMatrix(TaskExpressions &taskexpr) {
+    spMatrixInit(matrix, 3*3*50*50*50 + 2*50*50, fullVectSize);
+    fillMatrix3d6Expr(matrix, taskexpr, nX, nY, nZ);
+}
+
+void Task::setTaskExpr(TaskExpressions &task) {
+    task.x1 = (sigma * dt) / (timeStepX * timeStepX);
+    task.y1 = (sigma * dt) / (timeStepY * timeStepY);
+    task.z1 = (sigma * dt) / (timeStepZ * timeStepZ);
+
+    task.x2Comp = (1 - 2 * task.x1 - 2 * task.y1 - 2 * task.z1);
+
+}
+
