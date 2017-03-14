@@ -117,11 +117,18 @@ void fillMatrix3d6Expr(SparseMatrix &sp, TaskExpressions &taskexpr, int sizeX, i
                 ++index;
 
                 // Z second
+                sp.values[index] = taskexpr.z1;
+                sp.columns[index] = z == 0 ?
+                                    x + sectionStart - realSizeZ * (sizeZ - 1) :
+                                    x + sectionStart + realSizeZ;
+                sp.pointerB[pIndex++] = index;
+                ++index;
+
             }
 
             // boundaries end
             sp.values[index] = 1;
-            sp.columns[index] = z * sizeZ + y * sizeY + sizeX - 1;
+            sp.columns[index] = sectionStart + realsizeY - 1;//z * sizeZ + y * sizeY + sizeX - 1;
             sp.pointerB[pIndex++] = index;
         }
     }

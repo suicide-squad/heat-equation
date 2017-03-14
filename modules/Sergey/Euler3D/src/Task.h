@@ -5,12 +5,12 @@
 #ifndef EULER_TASK_H
 #define EULER_TASK_H
 
+#include "SparseMatrix.h"
+#include "StructDeclamer.h"
 #include <string>
 #include <cmath>
-#include "SparseMatrix.h"
 
 using std::string;
-
 class Task {
 public:
     Task();
@@ -35,44 +35,35 @@ public:
     // debug function
     void printVectFile(string filename, int timeVect = 0);
 
+    double  tStart, tFinish;
+    double  dt;
     int     currTime, prevTime;
 
+    int fullVectSize;
     int     nX;             // count of initial elements
     int     nY;
     int     nZ;
 
-private:
-    double** vect;
-    double  xStart, xEnd;   // range
-    double  yStart, yEnd;
-    double  zStart, zEnd;
-    double  sigma;          //
-
-    int     bc;             // not used
-
-    double  tStart, tFinish;
-    double  dt;
-
-    double  timeStepX;       // time time between calculating
-    double  timeStepY;
-    double  timeStepZ;
-
-    int fullVectSize;
-
     // Sparse Matrix
     SparseMatrix matrix;
 
-};
+    double** vect;
 
-typedef struct TaskExpressions {
-    double x1;
-    double x2Comp;
+private:
 
-    double y1;
-//    double y2;
+    double  xStart, xEnd;   // range
 
-    double z1;
-//    double z2;
+    double  yStart, yEnd;
+    double  zStart, zEnd;
+
+    double  sigma;          //
+    int     bc;             // not used
+    double  timeStepX;       // time time between calculating
+
+    double  timeStepY;
+
+    double  timeStepZ;
+
 };
 
 #endif //EULER_TASK_H

@@ -7,16 +7,12 @@
 #include <omp.h>
 #include <cstdio>
 #include "Task.h"
+#include "StructDeclamer.h"
 
 const int ENABLE_PARALLEL = 1;
 
-typedef struct SparseMatrix {
-    int _size;
-    int _rows;
-    double *values;
-    int *columns;   // какой столбец
-    int *pointerB;  // указатель на начало строки
-};
+struct TaskExpressions;
+struct SparseMatrix;
 
 void fillMatrix2Expr(SparseMatrix &sp, int size, double expr1, double expr2);
 
