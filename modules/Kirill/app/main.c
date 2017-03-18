@@ -6,6 +6,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <memory.h>
+#include <sp_mat.h>
 
 #include "sp_mat.h"
 #include "parser.h"
@@ -23,7 +24,7 @@ int main() {
 
   if (error != OK) return error;
 
-  size_t dim = (setting.NX+2)*setting.NY*setting.NZ;
+  size_t dim = (setting.NX + 2)*setting.NY*setting.NZ;
   function = (double *)malloc(sizeof(double)*dim);
   memset(function, 0, dim* sizeof(double));
 
@@ -47,28 +48,32 @@ int main() {
   double iJk = setting.dt*setting.SIGMA/(hY*hY);
   double ijK = setting.dt*setting.SIGMA/(hZ*hZ);
 
-  size_t NZ = setting.NX*setting.NY*setting.NZ*7 + (dim - setting.NX*setting.NY*setting.NZ);
+  size_t NZ = setting.NX*setting.NY*setting.NZ*7 + (dim - setting.NX*setting.NY*setting.NZ)*3;
   initSpMat(&mat, NZ, dim);
   int j,k;
   int NX = (int)setting.NX + 2;
   int NXY = (int)setting.NY*NX;
+
   int index = 0;
   mat.rowIndex[0] = 0;
 
   for (int i = 0; i < dim; i++) {
-    if ( i%NX!= 0 && i%NX != NX - 1 ) {
+    if (i % NX != 0 && i % NX != NX - 1) {
       // Смещение на x + 1 и x - 1 с учётом граничных условий
       // ***************************************
       mat.col[index] = i - 1;
       mat.value[index] = Ijk;
+//      mat.value[index] = 1;
       index++;
 
       mat.col[index] = i;
       mat.value[index] = IJK;
+//      mat.value[index] = 2;
       index++;
 
       mat.col[index] = i + 1;
       mat.value[index] = Ijk;
+//      mat.value[index] = 1;
       index++;
       // ***************************************
 
@@ -76,17 +81,22 @@ int main() {
       // ***************************************
       j = i - NX;
       if (j <= 0) {
-        mat.col[index] = (int)dim + j;
+        mat.col[index] = (int) dim + j;
         mat.value[index] = iJk;
+//        mat.value[index] = 3;
+
         index++;
-      }
-      else {
+      } else {
         mat.col[index] = j;
         mat.value[index] = iJk;
+//        mat.value[index] = 3;
+
         index++;
       }
       mat.col[index] = (i + NX) % NXY;
       mat.value[index] = iJk;
+//      mat.value[index] = 3;
+
       index++;
       // ***************************************
 
@@ -94,30 +104,59 @@ int main() {
       // ***************************************
       k = i - NXY;
       if (k <= 0) {
-        mat.col[index] = (int)dim + k;
+        mat.col[index] = (int) dim + k;
         mat.value[index] = ijK;
         index++;
-      }
-      else {
+      } else {
         mat.col[index] = k;
         mat.value[index] = ijK;
         index++;
 
       }
-      mat.col[index] = (i + NXY)%(int)dim;
+      mat.col[index] = (i + NXY) % (int) dim;
       mat.value[index] = ijK;
       index++;
       // ***************************************
 
       mat.rowIndex[i + 1] = mat.rowIndex[i] + 7;
-    } else {
+    } else if (i % NX == 0) {
       mat.col[index] = i;
-      mat.value[index] = 1.0;
+      mat.value[index] = Ijk;
+//      mat.value[index] = 1;
       index++;
 
-      mat.rowIndex[i + 1] = mat.rowIndex[i] + 1;
+      mat.col[index] = i + 1;
+      mat.value[index] = IJK;
+//      mat.value[index] = 2;
+      index++;
+
+      mat.col[index] = i + 2;
+//      mat.value[index] = 1;
+      mat.value[index] = Ijk;
+      index++;
+
+      mat.rowIndex[i + 1] = mat.rowIndex[i] + 3;
+    } else if (i % NX == NX - 1) {
+      mat.col[index] = i - 2;
+      mat.value[index] = Ijk;
+//      mat.value[index] = 1;
+      index++;
+
+      mat.col[index] = i - 1;
+      mat.value[index] = IJK;
+//      mat.value[index] = 2;
+      index++;
+
+      mat.col[index] = i;
+//      mat.value[index] = 1;
+      mat.value[index] = Ijk;
+      index++;
+
+      mat.rowIndex[i + 1] = mat.rowIndex[i] + 3;
     }
   }
+
+//  printSpMat(mat);
 
   double *nextFunction = (double *)malloc(sizeof(double)*dim);
   double *tmp;
@@ -142,5 +181,7 @@ int main() {
   writeFunctionX(pathResult, function, setting.NX);
 
   freeSpMat(&mat);
+  free(function);
+  free(nextFunction);
   return 0;
 }

@@ -38,6 +38,8 @@ def main():
 		plt.xlabel('x', fontsize=14)
 		plt.ylabel('U(x)', fontsize=14)
 		plt.grid(True)
+
+		plt.savefig(os.path.join(os.pardir, "result", sys.argv[1], "result.png"))
 		plt.show()
 
 	except AssertionError:
