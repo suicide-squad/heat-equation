@@ -16,9 +16,9 @@ add_executable(${target} ${src_runge})
 target_link_libraries(${target} ${LIBRARY})
 
 ## НЕЯВНЫЙ МЕТОД
-#set(target "${APP}_imp")
-#
-#file(GLOB  src_imp imp.c)
-#
-#add_executable(${target} ${src_imp})
-#target_link_libraries(${target} ${LIBRARY})
+set(target "${APP}_implicit")
+
+file(GLOB  src_implicit implicit.c)
+
+add_executable(${target} ${src_implicit})
+target_link_libraries(${target} ${LIBRARY})

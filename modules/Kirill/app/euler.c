@@ -17,7 +17,7 @@ const char pathResult[] = "../../../../result/Kirill/euler.txt";
 int main() {
   SpMatrix mat;
   Setting setting;
-  double coeffs[5];
+  double coeffs[4];
   double* function;
   int error;
   error = readSetting(pathSetting, &setting);

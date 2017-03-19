@@ -6,7 +6,6 @@
 #include <math.h>
 #include <stdlib.h>
 #include <memory.h>
-#include <parser.h>
 
 #include "sp_mat.h"
 #include "parser.h"
