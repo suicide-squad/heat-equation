@@ -34,7 +34,7 @@ void multMV(TYPE** result, SpMatrix mat, TYPE* vec) {
   }
 }
 
-void sumV(size_t N, double h, TYPE **result, TYPE *U, TYPE *k1, TYPE *k2, TYPE *k3, TYPE *k4) {
+void sumV(TYPE **result, TYPE *U, TYPE *k1, TYPE *k2, TYPE *k3, TYPE *k4, size_t N, double h) {
   #pragma omp parallel for num_threads(2) if (ENABLE_PARALLEL)
   for (int i = 0; i < N; i++)
     (*result)[i] = U[i] + h*(k1[i] + 2.0*k2[i] + 2.0*k3[i] + k4[i]);
@@ -69,4 +69,109 @@ void denseMult(double **result, double **mat, double *vec, size_t dim) {
     for (int i = 0;i < dim;i++)
       (*result)[x]+=mat[x][i]*vec[i];
   }
+}
+void createExplicitSpMat(SpMatrix *mat, TYPE coeffs[5], int dim, int NX, int NXY) {
+  int index = 0, j, k;
+  mat->rowIndex[0] = 0;
+  for (int i = 0; i < dim; i++) {
+    if (i % NX != 0 && i % NX != NX - 1) {
+      // Смещение на x + 1 и x - 1 с учётом граничных условий
+      // ***************************************
+      mat->col[index] = i - 1;
+      mat->value[index] = coeffs[0];
+//      mat->value[index] = 1;
+      index++;
+
+      mat->col[index] = i;
+      mat->value[index] = coeffs[1];
+//      mat->value[index] = 2;
+      index++;
+
+      mat->col[index] = i + 1;
+      mat->value[index] = coeffs[0];
+//      mat->value[index] = 1;
+      index++;
+      // ***************************************
+
+      // Смещение на y + 1 и y - 1 с учётом цикличности условия
+      // ***************************************
+      j = i - NX;
+      if (j <= 0) {
+        mat->col[index] = dim + j;
+        mat->value[index] = coeffs[2];
+//        mat->value[index] = 3;
+
+        index++;
+      } else {
+        mat->col[index] = j;
+        mat->value[index] = coeffs[2];
+//        mat->value[index] = 3;
+
+        index++;
+      }
+      mat->col[index] = (i + NX) % NXY;
+      mat->value[index] = coeffs[2];
+//      mat->value[index] = 3;
+
+      index++;
+      // ***************************************
+
+      // Смещение на z + 1 и z - 1 с учётом цикличности условия
+      // ***************************************
+      k = i - NXY;
+      if (k <= 0) {
+        mat->col[index] = (int) dim + k;
+        mat->value[index] = coeffs[3];
+        index++;
+      } else {
+        mat->col[index] = k;
+        mat->value[index] = coeffs[3];
+        index++;
+
+      }
+      mat->col[index] = (i + NXY) % (int) dim;
+      mat->value[index] = coeffs[3];
+      index++;
+      // ***************************************
+      
+      mat->rowIndex[i + 1] = mat->rowIndex[i] + 7;
+    } else if (i % NX == 0) {
+      // ГРАНИЧНЫЕ УСЛОВИЯ СЛЕВА
+      mat->col[index] = i;
+      mat->value[index] = coeffs[0];
+//      mat->value[index] = 1;
+      index++;
+
+      mat->col[index] = i + 1;
+      mat->value[index] = coeffs[1];
+//      mat->value[index] = 2;
+      index++;
+
+      mat->col[index] = i + 2;
+//      mat->value[index] = 1;
+      mat->value[index] = coeffs[0];
+      index++;
+
+      mat->rowIndex[i + 1] = mat->rowIndex[i] + 3;
+    } else if (i % NX == NX - 1) {
+      // ГРАНИЧНЫЕ УСЛОВИЯ СПРАВА
+      mat->col[index] = i - 2;
+      mat->value[index] = coeffs[0];
+//      mat->value[index] = 1;
+      index++;
+
+      mat->col[index] = i - 1;
+      mat->value[index] = coeffs[1];
+//      mat->value[index] = 2;
+      index++;
+
+      mat->col[index] = i;
+//      mat->value[index] = 1;
+      mat->value[index] = coeffs[0];
+      index++;
+
+      mat->rowIndex[i + 1] = mat->rowIndex[i] + 3;
+    }
+  }
+
 }
