@@ -52,7 +52,7 @@ int main(int argc, char** argv) {
 
 
     // Output
-    FILE *outfile = fopen("Sergey_Euler_OUTPUT.txt", "w");
+    FILE *outfile = fopen("../../result/Sergey/Sergey_Euler_OUTPUT.txt", "w");
 
     double outData;
     for (int i = 1; i <= task.nX; ++i) {
