@@ -35,9 +35,9 @@ int readFunction(const char *path, double **function, size_t dim, size_t NX) {
     return NO_FILE;
 
   for (int i = 0; i < dim; i++)
-    if ( !fscanf(fp, "%lf\n", (*function) + i)
-        && i%(NX + 2)!=0 && i%(NX + 2) != NX + 1 )
-      return READING_ERROR;
+    if (i%(NX + 2)!=0 && i%(NX + 2) != NX + 1 )
+      if ( !fscanf(fp, "%lf\n", (*function) + i) )
+        return READING_ERROR;
 
   return OK;
 }

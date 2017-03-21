@@ -40,13 +40,19 @@ void freeSpMat(SpMatrix* mat);
 void multMV(TYPE** result, SpMatrix matrix, TYPE* vector);
 
 // Суммирование векторов для рунге-кутты
-void sumV(size_t N, double h, TYPE **result, TYPE *U, TYPE *k1, TYPE *k2, TYPE *k3, TYPE *k4);
+void sumV(TYPE **result, TYPE *U, TYPE *k1, TYPE *k2, TYPE *k3, TYPE *k4, size_t N, double h);
 
 void printSpMat(SpMatrix mat);
 TYPE procedure(SpMatrix mat, int i, int j);
 
 // Умножение плотной матрицы на вектор
-void denseMult(double **result, double **mat, double *vec, size_t dim);
+void denseMult(TYPE **result, TYPE **mat, TYPE *vec, size_t dim);
+
+// Создание матрицы для явных схем
+void createExplicitSpMat(SpMatrix *mat, TYPE coeffs[4], int dim, int NX, int NXY);
+
+// Создание матрицы для неявных схем
+void createImplicitSpMat(SpMatrix *mat, TYPE coeffs[3], int dim, int NX, int NXY);
 
 #ifdef __cplusplus
 }
