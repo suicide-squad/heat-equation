@@ -53,7 +53,6 @@ int Task::initTaskUsingFile(string settingFile, string functionFile) {
     fclose(inSettingfile);
     FILE *inFunctionfile = fopen(functionFile.c_str(), "r");
 
-
     initMemory();
 
     double datakek;
@@ -84,6 +83,10 @@ int Task::initMemory() {
     vect[0] = new double[fullVectSize];
     vect[1] = new double[fullVectSize];
 
+    for (int i = 0; i < fullVectSize; ++i) {
+        vect[0][i] = 0;
+        vect[1][i] = 0;
+    }
     return 0;
 }
 
@@ -126,22 +129,25 @@ void Task::printVectFile(string filename, int timeVect) {
 }
 
 void Task::createMatrix(TaskExpressions &taskexpr) {
-    spMatrixInit(matrix, 7*50*50*50 + 2*50*50, fullVectSize);
+    spMatrixInit(matrix, 7*nX*nY*nZ + 2*nY*nZ, fullVectSize);
     fillMatrix3d6Expr(matrix, taskexpr, nX, nY, nZ);
 }
 
 void Task::setTaskExpr(TaskExpressions &task) {
     task.x1 = (sigma * dt) / (timeStepX * timeStepX);
-    printf("%lf\n", sigma);
-    printf("%lf\n", dt);
-    printf("%lf\n", timeStepX);
-    printf("%lf\n", timeStepX);
+    printf("sigma %lf\n", sigma);
+    printf("dt %lf\n", dt);
+    printf("timeStepX %lf\n", timeStepX);
+    printf("taskx1 %lf\n", task.x1);
     task.y1 = (sigma * dt) / (timeStepY * timeStepY);
-    printf("%lf\n", task.y1);
+    printf("tasky1 %lf\n", task.y1);
     task.z1 = (sigma * dt) / (timeStepZ * timeStepZ);
-    printf("%lf\n", task.z1);
+    printf("taskz1 %lf\n", task.z1);
 
     task.x2Comp = (1 - 2 * task.x1 - 2 * task.y1 - 2 * task.z1);
+    printf("taskx2 %lf\n", task.x2Comp);
+
+    //1 - 2 * ((sigma * dt) * 1 / (timeStepX * timeStepX) * 1 / (timeStepY * timeStepY) * 1/ (timeStepZ * timeStepZ);
 
 }
 

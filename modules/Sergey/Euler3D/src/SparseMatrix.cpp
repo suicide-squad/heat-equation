@@ -60,18 +60,19 @@ void fillMatrix2Expr(SparseMatrix &sp, int size, double expr1, double expr2) {
 }
 
 void fillMatrix3d6Expr(SparseMatrix &sp, TaskExpressions &taskexpr, int sizeX, int sizeY, int sizeZ) {
-    int realSizeZ = sizeX * sizeY;
-    int realsizeY = sizeX;
+    int realSizeX = sizeX + 2;
+    int realSizeY = realSizeX;
+    int realSizeZ = realSizeY * sizeY;
     int index = 0;
     int pIndex = 0;
 
-    int size = (sizeX + 2) * (sizeY) * (sizeZ);
+//    int size = (sizeX + 2) * (sizeY) * (sizeZ);
 
 
     int sectionStart = 0;
     for (int z = 0; z < sizeZ; ++z) {
         for (int y = 0; y < sizeY ; ++y) {
-            sectionStart = z * realSizeZ + y * realsizeY;
+            sectionStart = z * realSizeZ + y * realSizeY;
             // boundaries
             sp.values[index] = 1;
             sp.columns[index] = sectionStart;
@@ -79,7 +80,7 @@ void fillMatrix3d6Expr(SparseMatrix &sp, TaskExpressions &taskexpr, int sizeX, i
             ++index;
 
             // kek
-            for (int x = 1; x < sizeX + 1; ++x) {
+            for (int x = 1; x < realSizeX - 1; ++x) {
                 // Z first
                 sp.values[index] = taskexpr.z1;
                 sp.columns[index] = z == 0 ?
@@ -92,8 +93,8 @@ void fillMatrix3d6Expr(SparseMatrix &sp, TaskExpressions &taskexpr, int sizeX, i
                 // Y first
                 sp.values[index] = taskexpr.y1;
                 sp.columns[index] = y == 0 ?
-                                    x + sectionStart + realsizeY * (sizeY - 1) :
-                                    x + sectionStart - realsizeY;
+                                    x + sectionStart + realSizeY * (sizeY - 1) :
+                                    x + sectionStart - realSizeY;
                 ++index;
 
                 // X Group center
@@ -112,8 +113,8 @@ void fillMatrix3d6Expr(SparseMatrix &sp, TaskExpressions &taskexpr, int sizeX, i
                 // Y second
                 sp.values[index] = taskexpr.y1;
                 sp.columns[index] = y == sizeY - 1?
-                                    x + sectionStart - realsizeY * (sizeY - 1) :
-                                    x + sectionStart + realsizeY;
+                                    x + sectionStart - realSizeY * (sizeY - 1) :
+                                    x + sectionStart + realSizeY;
                 ++index;
 
                 // Z second
@@ -127,7 +128,7 @@ void fillMatrix3d6Expr(SparseMatrix &sp, TaskExpressions &taskexpr, int sizeX, i
 
             // boundaries end
             sp.values[index] = 1;
-            sp.columns[index] = sectionStart + realsizeY - 1;//z * sizeZ + y * sizeY + sizeX - 1;
+            sp.columns[index] = sectionStart + realSizeY - 1;//z * sizeZ + y * sizeY + sizeX - 1;
             sp.pointerB[pIndex++] = index;
             ++index;
         }
@@ -154,7 +155,7 @@ void printVectors(SparseMatrix &sp) {
 //        fprintf(outfile, "%d ", sp.columns[i]);
 //    }
 //    printf("\n");
-
+//
 //    printf("pointerB\n");
 //    for (int i = 0; i < sp._rows + 1; ++i) {
 //        printf("%d ", sp.pointerB[i]);

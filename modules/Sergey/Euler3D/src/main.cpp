@@ -14,13 +14,14 @@ int main(int argc, char** argv) {
 
     Task task;
     task.initTaskUsingFile(settingFile, functionFile);
+//    task.printVectFile("kek", 0);
     task.preparationData();
     time_S = omp_get_wtime();
 
     TaskExpressions taskexpr;
     task.setTaskExpr(taskexpr);
     task.createMatrix(taskexpr);
-    printVectors(task.matrix);
+//    printVectors(task.matrix);
 
 
 
