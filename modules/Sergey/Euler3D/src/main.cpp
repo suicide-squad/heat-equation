@@ -54,7 +54,7 @@ int main(int argc, char** argv) {
     FILE *outfile = fopen("OUTPUT.txt", "w");
 
     double outData;
-    for (int i = 1; i < task.nX; ++i) {
+    for (int i = 1; i <= task.nX; ++i) {
         outData = task.getData(i, 0, 0);
         fprintf(outfile, "%2.15le\n", outData);
 
