@@ -9,8 +9,8 @@ int main(int argc, char** argv) {
 
     // Timing variables
     double time_S, time_E;
-    string functionFile = "./../../../../../initial/function.txt";
-    string settingFile = "./../../../../../initial/setting.ini";
+    string functionFile = "../../initial/function.txt";
+    string settingFile = "../../initial/setting.ini";
 
     Task task;
     task.initTaskUsingFile(settingFile, functionFile);
@@ -20,7 +20,7 @@ int main(int argc, char** argv) {
     TaskExpressions taskexpr;
     task.setTaskExpr(taskexpr);
     task.createMatrix(taskexpr);
-//    printVectors(task.matrix);
+    printVectors(task.matrix);
 
 
 
@@ -51,7 +51,7 @@ int main(int argc, char** argv) {
 
 
     // Output
-    FILE *outfile = fopen("OUTPUT.txt", "w");
+    FILE *outfile = fopen("Sergey_Euler_OUTPUT.txt", "w");
 
     double outData;
     for (int i = 1; i <= task.nX; ++i) {
