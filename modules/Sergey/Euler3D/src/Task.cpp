@@ -135,17 +135,17 @@ void Task::createMatrix(TaskExpressions &taskexpr) {
 
 void Task::setTaskExpr(TaskExpressions &task) {
     task.x1 = (sigma * dt) / (timeStepX * timeStepX);
-    printf("sigma %lf\n", sigma);
-    printf("dt %lf\n", dt);
-    printf("timeStepX %lf\n", timeStepX);
-    printf("taskx1 %lf\n", task.x1);
+//    printf("sigma %lf\n", sigma);
+//    printf("dt %lf\n", dt);
+//    printf("timeStepX %lf\n", timeStepX);
+//    printf("taskx1 %lf\n", task.x1);
     task.y1 = (sigma * dt) / (timeStepY * timeStepY);
-    printf("tasky1 %lf\n", task.y1);
+//    printf("tasky1 %lf\n", task.y1);
     task.z1 = (sigma * dt) / (timeStepZ * timeStepZ);
-    printf("taskz1 %lf\n", task.z1);
+//    printf("taskz1 %lf\n", task.z1);
 
     task.x2Comp = (1 - 2 * task.x1 - 2 * task.y1 - 2 * task.z1);
-    printf("taskx2 %lf\n", task.x2Comp);
+//    printf("taskx2 %lf\n", task.x2Comp);
 
     //1 - 2 * ((sigma * dt) * 1 / (timeStepX * timeStepX) * 1 / (timeStepY * timeStepY) * 1/ (timeStepZ * timeStepZ);
 

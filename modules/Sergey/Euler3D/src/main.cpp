@@ -14,29 +14,13 @@ int main(int argc, char** argv) {
 
     Task task;
     task.initTaskUsingFile(settingFile, functionFile);
-//    task.printVectFile("kek", 0);
     task.preparationData();
     time_S = omp_get_wtime();
 
     TaskExpressions taskexpr;
     task.setTaskExpr(taskexpr);
     task.createMatrix(taskexpr);
-//    printVectors(task.matrix);
 
-
-
-    // TODO вынести этот блок в отдельную функцию
-//    //printf("%.6lf\n", timedt);
-//    string consoleInput = "";
-//    if (argv[1] != 0) {
-//        timesize = pow(2, atof(argv[1]));
-//        consoleInput = argv[1];
-//    }
-
-    // TODO а этот ещё в отдельную
-//    printf("1/timesize:\t %.10lf\n", 1/timesize);
-//    printf("timesize:\t %.0f\n", timesize);
-//    printf("dt:\t\t %.2e\n", 1/timesize * (tFinal - tStart));
 
 
     // Calculating
@@ -60,8 +44,4 @@ int main(int argc, char** argv) {
         fprintf(outfile, "%2.15le\n", outData);
 
     }
-
-//    for (int i = 1; i <= task.fullVectSize; i++) {
-//        fprintf(outfile, "%2.15le\n", task.vect[task.prevTime][i]);
-//    }
 }
