@@ -12,7 +12,7 @@
 
 const char pathSetting[] = "../../../../initial/setting.ini";
 const char pathFunction[] = "../../../../initial/function.txt";
-const char pathResult[] = "../../../../result/Kirill/runge.txt";
+const char pathResult[] = "../../../../result/Kirill/runge3D.txt";
 
 int main() {
   SpMatrix A, B, C;
@@ -49,7 +49,7 @@ int main() {
   coeffs[3] = setting.SIGMA/(hZ*hZ);
   coeffs[1] = - 2.0*setting.SIGMA*(coeffs[0] + coeffs[2] + coeffs[3]);
 
-  size_t NZ = setting.NX*setting.NY*setting.NZ*7 + (dim - setting.NX*setting.NY*setting.NZ)*3;
+  size_t NZ = dim*7;
   int NX = (int)setting.NX + 2;
   int NXY = (int)setting.NY*NX;
 

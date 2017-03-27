@@ -6,13 +6,14 @@
 #include <math.h>
 #include <stdlib.h>
 #include <memory.h>
+#include <parser.h>
 
 #include "sp_mat.h"
 #include "parser.h"
 
 const char pathSetting[] = "../../../../initial/setting.ini";
 const char pathFunction[] = "../../../../initial/function.txt";
-const char pathResult[] = "../../../../result/Kirill/euler.txt";
+const char pathResult[] = "../../../../result/Kirill/euler3D.txt";
 
 int main() {
   SpMatrix mat;
@@ -48,7 +49,17 @@ int main() {
   coeffs[2] = setting.dt*setting.SIGMA/(hY*hY);
   coeffs[3] = setting.dt*setting.SIGMA/(hZ*hZ);
 
-  size_t NZ = setting.NX*setting.NY*setting.NZ*7 + (dim - setting.NX*setting.NY*setting.NZ)*3;
+//  ДЛЯ ОТЛАДКИ
+//  setting.NX = 3;
+//  setting.NY = 3;
+//  setting.NZ = 3;
+//  dim = 45;
+//  coeffs[0] = 1;
+//  coeffs[1] = 2;
+//  coeffs[2] = 3;
+//  coeffs[3] = 4;
+
+  size_t NZ = dim*7;
   int NX = (int)setting.NX + 2;
   int NXY = (int)setting.NY*NX;
 
