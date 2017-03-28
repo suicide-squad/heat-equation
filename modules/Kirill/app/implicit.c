@@ -15,7 +15,7 @@ const double EPS = 1e-10;
 
 const char pathSetting[] = "../../../../initial/setting.ini";
 const char pathFunction[] = "../../../../initial/function.txt";
-const char pathResult[] = "../../../../result/Kirill/implicit.txt";
+const char pathResult[] = "../../../../result/Kirill/implicit3D.txt";
 
 bool dist(double *x1, double *x2, size_t N) {
   for (int i = 0; i < N; i++)

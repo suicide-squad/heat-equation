@@ -62,7 +62,6 @@ TYPE procedure(SpMatrix mat, int i, int j) {
   return result;
 }
 
-
 void denseMult(double **result, double **mat, double *vec, size_t dim) {
   memset(*result, 0, dim*sizeof(double));
   for (int x = 0; x < dim; x++) {
@@ -70,111 +69,83 @@ void denseMult(double **result, double **mat, double *vec, size_t dim) {
       (*result)[x]+=mat[x][i]*vec[i];
   }
 }
+
 void createExplicitSpMat(SpMatrix *mat, TYPE coeffs[5], int dim, int NX, int NXY) {
-  int index = 0, j, k;
+  int index = 0, j, k, shiftIndex;
   mat->rowIndex[0] = 0;
   for (int i = 0; i < dim; i++) {
-    if (i % NX != 0 && i % NX != NX - 1) {
-      // Смещение на x + 1 и x - 1 с учётом граничных условий
-      // ***************************************
-      mat->col[index] = i - 1;
-      mat->value[index] = coeffs[0];
-//      mat->value[index] = 1;
-      index++;
+    if (i % NX == 0)
+      shiftIndex = 1;
+    else if (i % NX == NX - 1)
+      shiftIndex = -1;
+    else
+      shiftIndex = 0;
 
-      mat->col[index] = i;
-      mat->value[index] = coeffs[1];
-//      mat->value[index] = 2;
-      index++;
+    // ***************************************
+    //      Смещение на x - 1
+    // ***************************************
+    mat->col[index] = i + shiftIndex - 1;
+    mat->value[index] = coeffs[0];
+    index++;
 
-      mat->col[index] = i + 1;
-      mat->value[index] = coeffs[0];
-//      mat->value[index] = 1;
-      index++;
-      // ***************************************
+    mat->col[index] = i + shiftIndex;
+    mat->value[index] = coeffs[1];
+    index++;
 
-      // Смещение на y + 1 и y - 1 с учётом цикличности условия
-      // ***************************************
-      j = i - NX;
-      if (j <= 0) {
-        mat->col[index] = dim + j;
-        mat->value[index] = coeffs[2];
-//        mat->value[index] = 3;
-
-        index++;
-      } else {
-        mat->col[index] = j;
-        mat->value[index] = coeffs[2];
-//        mat->value[index] = 3;
-
-        index++;
-      }
-      mat->col[index] = (i + NX) % NXY;
+    // ***************************************
+    //      Смещение на x + 1
+    // ***************************************
+    mat->col[index] = i + shiftIndex + 1;
+    mat->value[index] = coeffs[0];
+    index++;
+    // ***************************************
+    //      Смещение на y - 1
+    // ***************************************
+    j = (i + shiftIndex) % NXY - NX;
+    if (j < 0) {
+      mat->col[index] = dim + j;
       mat->value[index] = coeffs[2];
-//      mat->value[index] = 3;
 
       index++;
-      // ***************************************
+    } else {
+      mat->col[index] = j;
+      mat->value[index] = coeffs[2];
 
-      // Смещение на z + 1 и z - 1 с учётом цикличности условия
-      // ***************************************
-      k = i - NXY;
-      if (k <= 0) {
-        mat->col[index] = (int) dim + k;
-        mat->value[index] = coeffs[3];
-        index++;
-      } else {
-        mat->col[index] = k;
-        mat->value[index] = coeffs[3];
-        index++;
+      index++;
+    }
+    // ***************************************
+    //      Смещение на y + 1
+    // ***************************************
+    mat->col[index] = ((i + shiftIndex) / NXY) * NXY + (i + shiftIndex + NX) % NXY;
+//      mat->col[index] = (i + NX) % NXY;
+    mat->value[index] = coeffs[2];
 
-      }
-      mat->col[index] = (i + NXY) % (int) dim;
+    index++;
+    // ***************************************
+    //    Смещение на  z - 1
+    // ***************************************
+    k = i + shiftIndex - NXY;
+    if (k <= 0) {
+      mat->col[index] = dim + k;
       mat->value[index] = coeffs[3];
       index++;
-      // ***************************************
-      
-      mat->rowIndex[i + 1] = mat->rowIndex[i] + 7;
-    } else if (i % NX == 0) {
-      // ГРАНИЧНЫЕ УСЛОВИЯ СЛЕВА
-      mat->col[index] = i;
-      mat->value[index] = coeffs[0];
-//      mat->value[index] = 1;
+    } else {
+      mat->col[index] = k;
+      mat->value[index] = coeffs[3];
       index++;
-
-      mat->col[index] = i + 1;
-      mat->value[index] = coeffs[1];
-//      mat->value[index] = 2;
-      index++;
-
-      mat->col[index] = i + 2;
-//      mat->value[index] = 1;
-      mat->value[index] = coeffs[0];
-      index++;
-
-      mat->rowIndex[i + 1] = mat->rowIndex[i] + 3;
-    } else if (i % NX == NX - 1) {
-      // ГРАНИЧНЫЕ УСЛОВИЯ СПРАВА
-      mat->col[index] = i - 2;
-      mat->value[index] = coeffs[0];
-//      mat->value[index] = 1;
-      index++;
-
-      mat->col[index] = i - 1;
-      mat->value[index] = coeffs[1];
-//      mat->value[index] = 2;
-      index++;
-
-      mat->col[index] = i;
-//      mat->value[index] = 1;
-      mat->value[index] = coeffs[0];
-      index++;
-
-      mat->rowIndex[i + 1] = mat->rowIndex[i] + 3;
     }
-  }
+    // ***************************************
+    //    Смещение на  z + 1
+    // ***************************************
+    mat->col[index] = (i + shiftIndex + NXY) % dim;
+    mat->value[index] = coeffs[3];
+    index++;
+    // ***************************************
 
+    mat->rowIndex[i + 1] = mat->rowIndex[i] + 7;
+  }
 }
+
 void createImplicitSpMat(SpMatrix *mat, TYPE *coeffs, int dim, int NX, int NXY) {
   int index = 0, j, k;
   mat->rowIndex[0] = 0;
@@ -184,12 +155,10 @@ void createImplicitSpMat(SpMatrix *mat, TYPE *coeffs, int dim, int NX, int NXY) 
       // ***************************************
       mat->col[index] = i - 1;
       mat->value[index] = coeffs[0];
-//      mat->value[index] = 1;
       index++;
 
       mat->col[index] = i + 1;
       mat->value[index] = coeffs[0];
-//      mat->value[index] = 1;
       index++;
       // ***************************************
 
@@ -199,20 +168,14 @@ void createImplicitSpMat(SpMatrix *mat, TYPE *coeffs, int dim, int NX, int NXY) 
       if (j <= 0) {
         mat->col[index] = dim + j;
         mat->value[index] = coeffs[1];
-//        mat->value[index] = 3;
-
         index++;
       } else {
         mat->col[index] = j;
         mat->value[index] = coeffs[1];
-//        mat->value[index] = 3;
-
         index++;
       }
       mat->col[index] = (i + NX) % NXY;
       mat->value[index] = coeffs[1];
-//      mat->value[index] = 3;
-
       index++;
       // ***************************************
 
@@ -220,16 +183,15 @@ void createImplicitSpMat(SpMatrix *mat, TYPE *coeffs, int dim, int NX, int NXY) 
       // ***************************************
       k = i - NXY;
       if (k <= 0) {
-        mat->col[index] = (int) dim + k;
+        mat->col[index] = dim + k;
         mat->value[index] = coeffs[2];
         index++;
       } else {
         mat->col[index] = k;
         mat->value[index] = coeffs[2];
         index++;
-
       }
-      mat->col[index] = (i + NXY) % (int) dim;
+      mat->col[index] = (i + NXY) % dim;
       mat->value[index] = coeffs[2];
       index++;
       // ***************************************
