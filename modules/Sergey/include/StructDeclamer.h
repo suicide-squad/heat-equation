@@ -2,8 +2,8 @@
 // Created by lenferd on 14.03.17.
 //
 
-#ifndef EULER3D_STRUCTDECLAMER_H
-#define EULER3D_STRUCTDECLAMER_H
+#ifndef STRUCTDECLAMER_H
+#define STRUCTDECLAMER_H
 
 #include "Task.h"
 
@@ -15,4 +15,4 @@ struct TaskExpressions {
     double z1;
 } ;
 
-#endif //EULER3D_STRUCTDECLAMER_H
+#endif //STRUCTDECLAMER_H
