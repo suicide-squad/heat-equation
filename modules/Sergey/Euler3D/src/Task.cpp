@@ -3,11 +3,11 @@
 //
 
 #include <cmath>
-#include "Task2.h"
+#include "Task.h"
 
 using std::string;
 
-int initTaskUsingFile(Task2 &task, double **vect, string settingFile) {
+int initTaskUsingFile(Task &task, double **vect, string settingFile) {
     FILE *inSettingfile = fopen(settingFile.c_str(), "r");
 
     if (inSettingfile == NULL) {
@@ -55,7 +55,7 @@ int initTaskUsingFile(Task2 &task, double **vect, string settingFile) {
     return 0;
 }
 
-int preparationData(Task2 &task){
+int preparationData(Task &task){
     task.timeStepX = (fabs(task.xStart) + fabs(task.xEnd)) / task.nX;
 
     task.timeStepY = (fabs(task.xStart) + fabs(task.xEnd)) / task.nY;

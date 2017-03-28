@@ -2,13 +2,13 @@
 // Created by lenferd on 27.03.17.
 //
 
-#ifndef HEAT_EQUATION_TASK2_H
-#define HEAT_EQUATION_TASK2_H
+#ifndef HEAT_EQUATION_TASK_H
+#define HEAT_EQUATION_TASK_H
 
 #include <iostream>
 using std::string;
 
-struct Task2 {
+struct Task {
     double  xStart, xEnd;   // range
 
     double  yStart, yEnd;
@@ -30,6 +30,6 @@ struct Task2 {
     double  dt;
 };
 
-int initTaskUsingFile(Task2 &task, double **vect, string settingFile);
-int preparationData(Task2 &task);
-#endif //HEAT_EQUATION_TASK2_H
+int initTaskUsingFile(Task &task, double **vect, string settingFile);
+int preparationData(Task &task);
+#endif //HEAT_EQUATION_TASK_H
