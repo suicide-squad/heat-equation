@@ -11,10 +11,14 @@ int main(int argc, char** argv) {
     // Timing variables
     double time_S, time_E;
     int prevTime, currTime;
+
+    // File variables
     string functionFile = "../../initial/function.txt";
     string settingFile = "../../initial/setting.ini";
 
     double** vect = new double*[2];
+
+
     Task task;
     initTaskUsingFile(task, vect, settingFile);
 
@@ -67,7 +71,7 @@ int main(int argc, char** argv) {
 
 
     // Output
-    FILE *outfile = fopen("../../result/Sergey/Sergey_Euler_OUTPUT.txt", "w");
+    FILE *outfile = fopen("../../result/Sergey/Sergey_Runge_OUTPUT.txt", "w");
 
     double outData;
     for (int i = 1; i <= task.nX; ++i) {
