@@ -1,3 +1,7 @@
+//
+// Created by lenferd on 28.03.17.
+//
+
 #include <iostream>
 #include <omp.h>
 #include "Task.h"
@@ -23,7 +27,7 @@ int main(int argc, char** argv) {
 
     // Init memory & read function file
     double** vect;
-    initMemoryReadData(vect, functionFile, task);
+    initMemoryReadData(vect, settingFile, task);
 
     // vector time-index for loop
     prevTime = 0;
@@ -44,7 +48,6 @@ int main(int argc, char** argv) {
     fillMatrix3d6Expr(spMat, matrixValue, task.nX, task.nY, task.nZ);
 
 
-
     // Calculating
     time_S = omp_get_wtime();
 
@@ -58,7 +61,7 @@ int main(int argc, char** argv) {
 
 
     // Output
-    FILE *outfile = fopen("../../result/Sergey/Sergey_Euler.txt", "w");
+    FILE *outfile = fopen("../../result/Sergey/Sergey_Runge_OUTPUT.txt", "w");
 
     double outData;
     for (int i = 1; i <= task.nX; ++i) {

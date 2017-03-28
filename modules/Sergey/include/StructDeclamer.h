@@ -7,7 +7,7 @@
 
 #include "Task.h"
 
-struct TaskExpressions {
+struct MatrixValue {
     double x1;
     double x2Comp;
 

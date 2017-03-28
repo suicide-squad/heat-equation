@@ -59,7 +59,7 @@ void fillMatrix2Expr(SparseMatrix &sp, int size, double expr1, double expr2) {
     sp.pointerB[pIndex] = index + 1;   //end
 }
 
-void fillMatrix3d6Expr(SparseMatrix &sp, TaskExpressions &taskexpr, int sizeX, int sizeY, int sizeZ) {
+void fillMatrix3d6Expr(SparseMatrix &sp, MatrixValue &taskexpr, int sizeX, int sizeY, int sizeZ) {
     int realSizeX = sizeX + 2;
     int realSizeY = realSizeX;
     int realSizeZ = realSizeY * sizeY;

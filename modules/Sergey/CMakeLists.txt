@@ -1,6 +1,3 @@
-#add_subdirectory(Euler3D)
-#add_subdirectory(Runge-Kutta)
-
 include_directories(include)
 
 get_filename_component(DIR_NAME ${CMAKE_CURRENT_LIST_DIR} NAME)

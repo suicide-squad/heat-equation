@@ -7,7 +7,7 @@
 
 using std::string;
 
-int initTaskUsingFile(Task &task, double **vect, string settingFile) {
+int initTaskUsingFile(Task &task, string settingFile) {
     FILE *inSettingfile = fopen(settingFile.c_str(), "r");
 
     if (inSettingfile == NULL) {
@@ -55,9 +55,30 @@ int initTaskUsingFile(Task &task, double **vect, string settingFile) {
     return 0;
 }
 
-int preparationData(Task &task){
+int setTimestep(Task &task){
     task.timeStepX = (fabs(task.xStart) + fabs(task.xEnd)) / task.nX;
 
     task.timeStepY = (fabs(task.xStart) + fabs(task.xEnd)) / task.nY;
     task.timeStepZ = (fabs(task.xStart) + fabs(task.xEnd)) / task.nZ;
+}
+
+int initMemoryReadData(double **& vect, string file, Task &task) {
+    FILE *inFunctionfile = fopen(file.c_str(), "r");
+
+    vect = new double*[2];
+    task.fullVectSize = (task.nX + 2) * (task.nY) * (task.nZ);
+    vect[0] = new double[task.fullVectSize];
+    vect[1] = new double[task.fullVectSize];
+
+    /// Read file
+    for (int k = 0; k < task.nZ; k++) {
+        for (int j = 0; j < task.nY; ++j) {
+            for (int i = 1; i < task.nX + 1; ++i) {
+                fscanf(inFunctionfile, "%lf\n", &vect[0][i + (task.nX + 2) * j + (task.nX+2) * task.nY * k]);
+            }
+        }
+    }
+
+    fclose(inFunctionfile);
+    return 0;
 }
