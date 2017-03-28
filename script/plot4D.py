@@ -75,6 +75,9 @@ def main():
     zmax = setting['ZEND']
     NZ = int(setting['NZ'])
 
+    tstart = 'START {:.0e} sec'.format(setting['TSTART'])
+    tfinish = 'FINISH {:.0e} sec'.format(setting['TFINISH'])
+
     x = np.linspace(xmin, xmax, NX, dtype = float)
     y = np.linspace(ymin, ymax, NY, dtype = float)
     z = np.linspace(zmin, zmax, NZ, dtype = float)
@@ -89,14 +92,16 @@ def main():
     fig = plt.figure("HEAD EQUATION")
 
     ax1 = fig.add_subplot(121, projection = '3d')
-    buildPlot3D(ax1, "start", us, usmin, usmax, x, y, z, xmin, xmax, ymin, ymax, zmin, zmax)
+    buildPlot3D(ax1, tstart, us, usmin, usmax, x, y, z, xmin,
+                xmax, ymin, ymax, zmin, zmax)
 
     pathFinish = os.path.join(os.pardir, "result", sys.argv[3])
     uf = np.loadtxt(pathFinish)
     uf.shape = (NZ, NY, NX)
 
     ax2 = fig.add_subplot(122, projection = '3d')
-    buildPlot3D(ax2, "finish", uf, usmin, usmax, x, y, z, xmin, xmax, ymin, ymax, zmin, zmax)
+    buildPlot3D(ax2, tfinish, uf, usmin, usmax, x, y, z, xmin,
+                xmax, ymin, ymax, zmin, zmax)
 
     m = cm.ScalarMappable(cmap=cm.jet)
     m.set_array(us[:][:][0])
