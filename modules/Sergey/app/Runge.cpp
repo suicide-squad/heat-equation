@@ -42,7 +42,7 @@ int main(int argc, char** argv) {
 
     // init and fill sparseMatrix
     SparseMatrix spMat;
-    int sparseMatrixSize = 7*task.nX * task.nY * task.nZ + 2 * task.nY * task.nZ;
+    int sparseMatrixSize = 9 * task.nX * task.nY * task.nZ;
 
     spMatrixInit(spMat, sparseMatrixSize, task.fullVectSize);
     fillMatrix3d6Expr(spMat, matrixValue, task.nX, task.nY, task.nZ);

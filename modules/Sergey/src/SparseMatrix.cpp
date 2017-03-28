@@ -71,19 +71,28 @@ void fillMatrix3d6Expr(SparseMatrix &sp, MatrixValue &taskexpr, int sizeX, int s
     for (int z = 0; z < sizeZ; ++z) {
         for (int y = 0; y < sizeY ; ++y) {
             sectionStart = z * realSizeZ + y * realSizeY;
-            // boundaries
-            sp.values[index] = 1;
-            sp.columns[index] = sectionStart;
-            sp.pointerB[pIndex++] = index;
-            ++index;
 
-            // kek
-            for (int x = 1; x < realSizeX - 1; ++x) {
+            /** Boundaries rule
+             *  If we on the edge, we should use same expression (line with parametrs), as the line after.
+             *  If it's first line the pattern for her is line two. (+1)
+             *  If it's last line, pattern - previous line.         (-1)
+             *  Realization - fixes value, whose start to work, if we on the boundaries, joins @var x
+             *  @var fixBounds
+             */
+
+            int fixBounds = 0;
+
+            for (int x = 0; x < realSizeX; ++x) {
+                if (x == 0 ) {
+                    fixBounds = 1;
+                } else if ((x - 1) == realSizeX) {
+                    fixBounds = -1;
+                }
                 // Z first
                 sp.values[index] = taskexpr.z1;
                 sp.columns[index] = z == 0 ?
-                                    x + sectionStart + realSizeZ * (sizeZ - 1) :
-                                    x + sectionStart - realSizeZ;
+                                    fixBounds + x + sectionStart + realSizeZ * (sizeZ - 1) :
+                                    fixBounds + x + sectionStart - realSizeZ;
                 sp.pointerB[pIndex++] = index;
                 ++index;
 
@@ -91,44 +100,40 @@ void fillMatrix3d6Expr(SparseMatrix &sp, MatrixValue &taskexpr, int sizeX, int s
                 // Y first
                 sp.values[index] = taskexpr.y1;
                 sp.columns[index] = y == 0 ?
-                                    x + sectionStart + realSizeY * (sizeY - 1) :
-                                    x + sectionStart - realSizeY;
+                                    fixBounds + x + sectionStart + realSizeY * (sizeY - 1) :
+                                    fixBounds + x + sectionStart - realSizeY;
                 ++index;
 
                 // X Group center
                 sp.values[index] = taskexpr.x1;
-                sp.columns[index] = x - 1;
+                sp.columns[index] = fixBounds + x - 1;
                 ++index;
 
                 sp.values[index] = taskexpr.x2Comp;
-                sp.columns[index] = x;
+                sp.columns[index] = fixBounds + x;
                 ++index;
 
                 sp.values[index] = taskexpr.x1;
-                sp.columns[index] = x + 1;
+                sp.columns[index] = fixBounds + x + 1;
                 ++index;
 
                 // Y second
                 sp.values[index] = taskexpr.y1;
                 sp.columns[index] = y == sizeY - 1?
-                                    x + sectionStart - realSizeY * (sizeY - 1) :
-                                    x + sectionStart + realSizeY;
+                                    fixBounds + x + sectionStart - realSizeY * (sizeY - 1) :
+                                    fixBounds + x + sectionStart + realSizeY;
                 ++index;
 
                 // Z second
                 sp.values[index] = taskexpr.z1;
                 sp.columns[index] = z == sizeZ - 1 ?
-                                    x + sectionStart - realSizeZ * (sizeZ - 1) :
-                                    x + sectionStart + realSizeZ;
+                                    fixBounds + x + sectionStart - realSizeZ * (sizeZ - 1) :
+                                    fixBounds + x + sectionStart + realSizeZ;
                 ++index;
 
+                // afterloop bound fix value clearing
+                fixBounds = 0;
             }
-
-            // boundaries end
-            sp.values[index] = 1;
-            sp.columns[index] = sectionStart + realSizeY - 1;//z * sizeZ + y * sizeY + sizeX - 1;
-            sp.pointerB[pIndex++] = index;
-            ++index;
         }
     }
 
