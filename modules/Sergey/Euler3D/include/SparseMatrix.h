@@ -12,7 +12,14 @@
 const int ENABLE_PARALLEL = 1;
 
 struct TaskExpressions;
-struct SparseMatrix;
+
+struct SparseMatrix {
+    int _size;
+    int _rows;
+    double *values;
+    int *columns;   // какой столбец
+    int *pointerB;  // указатель на начало строки
+};
 
 void fillMatrix2Expr(SparseMatrix &sp, int size, double expr1, double expr2);
 

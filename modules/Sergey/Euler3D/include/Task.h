@@ -1,56 +1,14 @@
 //
-// Created by lenferd on 09.03.17.
+// Created by lenferd on 27.03.17.
 //
 
-#ifndef EULER_TASK_H
-#define EULER_TASK_H
+#ifndef HEAT_EQUATION_TASK2_H
+#define HEAT_EQUATION_TASK2_H
 
-#include "SparseMatrix.h"
-#include "StructDeclamer.h"
-#include <string>
-#include <cmath>
-
+#include <iostream>
 using std::string;
-class Task {
-public:
-    Task();
 
-    // first step
-    int initTaskUsingFile(string settingFile, string functionFile);
-    int initMemory();
-    void preparationData();
-
-    // get and set
-    void setData(double data, int x, int y, int z, int timeVect = 0);
-    double getData(int x, int y, int z, int timeVect = 0);
-
-    // Transform
-    void createMatrix(TaskExpressions &taskexpr);
-    void setTaskExpr(TaskExpressions &task);
-
-    // Print function
-    void printTaskData();
-    void printVect(int timeVect = 0);
-
-    // debug function
-    void printVectFile(string filename, int timeVect = 0);
-
-    double  tStart, tFinish;
-    double  dt;
-    int     currTime, prevTime;
-
-    int fullVectSize;
-    int     nX;             // count of initial elements
-    int     nY;
-    int     nZ;
-
-    // Sparse Matrix
-    SparseMatrix matrix;
-
-    double** vect;
-
-private:
-
+struct Task2 {
     double  xStart, xEnd;   // range
 
     double  yStart, yEnd;
@@ -58,12 +16,20 @@ private:
 
     double  sigma;          //
     int     bc;             // not used
+
     double  timeStepX;       // time time between calculating
-
     double  timeStepY;
-
     double  timeStepZ;
 
+    int     nX;             // count of initial elements
+    int     nY;
+    int     nZ;
+    int     fullVectSize;
+
+    double  tStart, tFinish;
+    double  dt;
 };
 
-#endif //EULER_TASK_H
+int initTaskUsingFile(Task2 &task, double **vect, string settingFile);
+int preparationData(Task2 &task);
+#endif //HEAT_EQUATION_TASK2_H

@@ -66,8 +66,6 @@ void fillMatrix3d6Expr(SparseMatrix &sp, TaskExpressions &taskexpr, int sizeX, i
     int index = 0;
     int pIndex = 0;
 
-//    int size = (sizeX + 2) * (sizeY) * (sizeZ);
-
 
     int sectionStart = 0;
     for (int z = 0; z < sizeZ; ++z) {
@@ -144,22 +142,5 @@ void printVectors(SparseMatrix &sp) {
     }
     printf("\n");
 
-//    FILE *outfile = fopen("kekus", "w");
-//    int pb = 0;
-//    fprintf(outfile,"columns\n");
-//    for (int i = 0; i < sp._size; ++i) {
-//        if (i == sp.pointerB[pb]) {
-//            fprintf(outfile, "==========\n");
-//            pb++;
-//        }
-//        fprintf(outfile, "%d ", sp.columns[i]);
-//    }
-//    printf("\n");
-//
-//    printf("pointerB\n");
-//    for (int i = 0; i < sp._rows + 1; ++i) {
-//        printf("%d ", sp.pointerB[i]);
-//    }
-//    printf("\n");
 }
 
