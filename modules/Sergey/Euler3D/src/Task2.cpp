@@ -7,7 +7,7 @@
 
 using std::string;
 
-int initTaskUsingFile(Task2 &task, double **vect, string settingFile, string functionFile) {
+int initTaskUsingFile(Task2 &task, double **vect, string settingFile) {
     FILE *inSettingfile = fopen(settingFile.c_str(), "r");
 
     if (inSettingfile == NULL) {

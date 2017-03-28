@@ -17,7 +17,7 @@ int main(int argc, char** argv) {
 
     double** vect = new double*[2];
     Task2 task;
-    initTaskUsingFile(task, vect, settingFile, functionFile);
+    initTaskUsingFile(task, vect, settingFile);
 
     FILE *inFunctionfile = fopen(functionFile.c_str(), "r");
 
@@ -45,8 +45,14 @@ int main(int argc, char** argv) {
     prevTime = 0;
     currTime = 1;
 
-    vect[0][0] = vect[0][1];
-    vect[0][task.nX+1] = vect[0][task.nX];
+//    FILE *ooutfile = fopen("../../result/Sergey/testKek.txt", "w");
+//
+//    for (int l = 0; l < task.fullVectSize; ++l) {
+//        fprintf(ooutfile, "%lf\n", vect[0][l]);
+//    }
+
+//    vect[0][0] = vect[0][1];
+//    vect[0][task.nX+1] = vect[0][task.nX];
 
     TaskExpressions taskexpr;
     setTaskExpr(taskexpr, task);
