@@ -85,7 +85,7 @@ void fillMatrix3d6Expr(SparseMatrix &sp, MatrixValue &taskexpr, int sizeX, int s
             for (int x = 0; x < realSizeX; ++x) {
                 if (x == 0 ) {
                     fixBounds = 1;
-                } else if ((x - 1) == realSizeX) {
+                } else if ((x + 1) == realSizeX) {
                     fixBounds = -1;
                 }
                 // Z first
