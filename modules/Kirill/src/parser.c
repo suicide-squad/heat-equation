@@ -42,12 +42,22 @@ int readFunction(const char *path, double **function, size_t dim, size_t NX) {
   return OK;
 }
 
-void writeFunctionX(const char *path, double *function, size_t NX) {
+void writeFunction1D(const char *path, double *function, size_t NX) {
   FILE *fp;
   fp = fopen(path, "w");
 
   for (int i = 1; i < NX + 1; i++)
     fprintf(fp, "%.15le\n", function[i]);
+
+  fclose(fp);
+}
+void writeFunction3D(const char *path, double *function, size_t dim, size_t NX) {
+  FILE *fp;
+  fp = fopen(path, "w");
+
+  for (int i = 0; i < dim; i++)
+    if (i%(NX + 2)!=0 && i%(NX + 2) != NX + 1 )
+      fprintf(fp, "%.15le\n", function[i]);
 
   fclose(fp);
 }

@@ -112,7 +112,7 @@ int main() {
   double t1 = omp_get_wtime();
   double diffTime = t1 - t0;
   printf("Time -\t%.3lf\n", diffTime);
-  writeFunctionX(pathResult, function, setting.NX);
+  writeFunction1D(pathResult, function, setting.NX);
 
   freeSpMat(&A);
 
