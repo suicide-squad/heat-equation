@@ -94,6 +94,103 @@ void unpack (double *ex, double *u, int NX, int NY, int NZ, op which) {
   return;
 }
 
+//void scatter_by_rows(double *function, double* functionZ, int NX, int NY, int NZ, int NYr, int NZr, MPI_Comm comm) {
+//  int size;
+//  MPI_Comm_size(comm, &size);
+//  printf("size %d\n", size);
+//  MPI_Scatter(function, NX*(NZr-2)*NY, MPI_DOUBLE, functionZ + NX*NY, NX*(NZr-2)*NY, MPI_DOUBLE, 0, comm);
+//  printf("YT!\n");
+//}
+
+void scatter_by_cols(double *function, double* functionChunk, int NX, int NY, int NZ, int NYr, int NZr, MPI_Comm comm) {
+
+  for (int z = 1; z < NZr - 1; z++)
+    MPI_Scatter(function + z*NY*NX, NX*(NYr-2), MPI_DOUBLE, functionChunk + NX, NX*(NYr-2), MPI_DOUBLE, 0, comm);
+}
+
+void gather_by_cols(double *function, double* functionChunk, int NX, int NY, int NZ, int NYr, int NZr, MPI_Comm comm) {
+
+  for (int z = 1; z < NZr-1; z++)
+    MPI_Gather(function + z*NY*NX, NX*(NYr-2), MPI_DOUBLE, functionChunk + NX, NX*(NYr-2), MPI_DOUBLE, 0, comm);
+}
+
+void scatter_by_block(double *function, double **functionRank, int NX, int NY, int NZ, int NYr, int NZr, MPI_Comm gridComm) {
+  int ndim = 0;
+  MPI_Cartdim_get(gridComm, &ndim);
+  int dims[ndim], periods[ndim], gridCoords[ndim];
+
+  MPI_Cart_get(gridComm, ndim, dims, periods, gridCoords);
+  MPI_Comm colComm, rowComm;
+
+  int remain_dims[ndim];
+  remain_dims[0] = 1; remain_dims[1] = 0;
+  MPI_Cart_sub(gridComm, remain_dims, &colComm);
+
+  int rank;
+  MPI_Cart_rank(gridComm, gridCoords, &rank);
+  double *functionZ;
+  if (gridCoords[1] == 0) {
+    functionZ = (double *)malloc(sizeof(double)*NX*NY*NZr);
+    printf("z=%d y=%d r=%d\n", gridCoords[0], gridCoords[1], rank);
+
+//    scatter_by_rows(function, functionZ, NX, NY, NZ, NYr, NZr, colComm);
+    printf("dim %d dimPart %d\n", NX*NY*NZ, NX*NY*(NZr-2));
+    MPI_Scatter(function, NX*NY*(NZr - 2), MPI_DOUBLE, functionZ + NX*NY, NX*NY*(NZr - 2), MPI_DOUBLE, 0, colComm);
+  }
+
+  printf("scatter rows\n");
+  remain_dims[1] = 0; remain_dims[0] = 1;
+  MPI_Cart_sub(gridComm, remain_dims, &rowComm);
+
+  *functionRank = (double *)malloc(sizeof(double)*NX*NYr*NZr);
+
+  scatter_by_cols(functionZ, *functionRank, NX, NY, NZ, NYr, NZr, rowComm);
+
+  if (gridCoords[1] == 0) free(functionZ);
+}
+
+
+void gather_by_block(double *function,
+                     double *functionRank,
+                     int NX,
+                     int NY,
+                     int NZ,
+                     int NYr,
+                     int NZr,
+                     MPI_Comm gridComm) {
+  int ndim = 0;
+  MPI_Cartdim_get(gridComm, &ndim);
+  int dims[ndim], periods[ndim], gridCoords[ndim];
+
+  MPI_Cart_get(gridComm, ndim, dims, periods, gridCoords);
+  MPI_Comm colComm, rowComm;
+
+  int remain_dims[ndim];
+  remain_dims[0] = 1; remain_dims[1] = 0;
+  MPI_Cart_sub(gridComm, remain_dims, &colComm);
+  remain_dims[1] = 0; remain_dims[0] = 1;
+  MPI_Cart_sub(gridComm, remain_dims, &rowComm);
+
+  printf("gather start cols!\n");
+
+  double *functionZ;
+  if (gridCoords[1] == 0) {
+    functionZ = (double *) malloc(sizeof(double) * NX * NY * NZr);
+  }
+
+  gather_by_cols(functionZ, functionRank, NX, NY, NZ, NYr, NZr, rowComm);
+
+  printf("gather cols!\n");
+
+
+
+  if (gridCoords[1] == 0) {
+    MPI_Gather(function, NX*NY*(NZr - 2), MPI_DOUBLE, functionZ + NX*NY, NX*NY*(NZr - 2), MPI_DOUBLE, 0, colComm);
+  }
+
+  if (gridCoords[1] == 0) free(functionZ);
+}
+
 
 int main(int argc, char **argv) {
   int sizeP, rankP;
@@ -110,6 +207,8 @@ int main(int argc, char **argv) {
   MPI_Comm_size(MPI_COMM_WORLD, &sizeP);
   MPI_Comm_rank(MPI_COMM_WORLD, &rankP);
 
+  MPI_Comm gridComm;  	// Коммуникатор в виде квадратной решетки
+
   SpMatrix mat;
   size_t dim;
   double coeffs[4];
@@ -118,6 +217,7 @@ int main(int argc, char **argv) {
 
 
   size_t NX, NY, NZ, NYr, NZr;
+
 
   if (rankP == ROOT) {
     int error;
@@ -158,6 +258,7 @@ int main(int argc, char **argv) {
 
   MPI_Bcast(&sizeTime, 1, MPI_UNSIGNED_LONG, ROOT, MPI_COMM_WORLD);
   MPI_Bcast(&dim, 1, MPI_UNSIGNED_LONG, ROOT, MPI_COMM_WORLD);
+  MPI_Bcast(coeffs, 4, MPI_UNSIGNED_LONG, ROOT, MPI_COMM_WORLD);
   MPI_Bcast(&NX, 1, MPI_UNSIGNED_LONG, ROOT, MPI_COMM_WORLD);
   MPI_Bcast(&NY, 1, MPI_UNSIGNED_LONG, ROOT, MPI_COMM_WORLD);
   MPI_Bcast(&NZ, 1, MPI_UNSIGNED_LONG, ROOT, MPI_COMM_WORLD);
@@ -168,38 +269,41 @@ int main(int argc, char **argv) {
   if (sizeP != 1) {
     blockYP = (sizeP / 2);
     blockZP = (sizeP / 2);
-    NYr = NY / blockYP;
-    NZr = NZ / blockZP;
+  } else {
+    blockYP = 1;
+    blockZP = 1;
   }
+  NYr = NY / blockYP + 2;
+  NZr = NZ / blockZP + 2;
+
+  const int DIM_CART = 2;
+//  размер каждой размерности
+  int dims[DIM_CART];   int periods[DIM_CART];
+  int gridCoords[DIM_CART], cartrank;
+
+  dims[0] = blockZP; dims[1] = blockYP;
+//  наличие циклов в каждой размерности
+  periods[0] = 1; periods[1] = 1;
+//  разрешение системе менять номера процессов
+  int reorder = 0;
+  MPI_Cart_create(MPI_COMM_WORLD, DIM_CART, dims, periods, reorder, &gridComm);
+
+  // Координаты текущего процесса в процессной решетке и ранг в решётке
+  MPI_Comm_rank(gridComm, &cartrank);
+  // Определение координат процесса в решетке
+  MPI_Cart_coords(gridComm, rankP, DIM_CART, gridCoords);
+
+  scatter_by_block(function, &functionRank, NX, NY, NZ, NYr, NZr, gridComm);
+
+  printf("scatter finish!\n");
 
 //  TODO:
 //  При кубиках на границах достаточно выделять на + 1 (соседей с одной стороны нет)
 //  Если ранковый кубик не на границе, то нужно выделять по 2 соседа
 // ЛОЖЬ!
 //  Всегда нужно знать соседей, при границах зацикливание!!!
-  size_t dimPart = NX*(NYr + 2)*(NZr + 2);
-  functionRank = (double *)malloc(sizeof(double)*dimPart);
-
+  size_t dimPart = NX*(NYr)*(NZr);
   //  SCATTER
-  if (rankP == ROOT) {
-    for (int rank = 1; rank < sizeP; rank++) {
-      for (int z = 1; z < NZr + 1; z++)
-        for (int y = 1; y < NYr + 1; y++)
-          for (int x = 0; x < NX; x++)
-            functionRank[x + y*NX + z*NX*NYr] = function[x + (y + (rank%2)*NYr)*NX + (z + (rank/2)*NZr)*NX*NY];
-
-      MPI_Rsend(functionRank, dimPart, MPI_DOUBLE, rank, 0, MPI_COMM_WORLD);
-    }
-    for (int z = 1; z < NZr + 1; z++)
-      for (int y = 1; y < NYr + 1; y++)
-        for (int x = 0; x < NX; x++)
-          functionRank[x + y*NX + z*NX*NYr] = function[x + y*NX + z*NX*NY];
-
-  }
-
-  if (rankP != ROOT) {
-    MPI_Recv(functionRank, dimPart, MPI_DOUBLE, ROOT, 0, MPI_COMM_WORLD, &status);
-  }
 
 //  ДЛЯ ОТЛАДКИ
 //  setting.NX = 3;
@@ -233,83 +337,30 @@ int main(int argc, char **argv) {
 
   // ОСНОВНЫЕ ВЫЧИСЛЕНИЯ
 
-  for (int t = 1; t <= 1; t++) {
-////    TODO:
-////    ТУТ должен быть обмен границ!
-//    Отправка граничных условий
-  if (sizeP != 1) {
-//  определение следующего и предыдущего процесса
-    nextY = ((rankP + 1) % blockYP != 0) ? rankP + 1 : rankP - blockYP + 1;
-    prevY = (rankP % blockYP != 0) ? rankP - 1 : rankP + blockYP - 1;
-    nextZ = (rankP >= blockYP*(blockZP -1)) ? rankP - blockYP*(blockZP - 1) : rankP + blockYP;
-    prevZ = (rankP < blockYP) ? rankP + blockYP * (blockZP - 1) : rankP - blockYP;
-    //printf("rank %d : NY %d PY %d NZ %d PZ %d\n", rankP, nextY, prevY, nextZ, prevZ);
-//  -------------------------------------------
-
-//  запоковать и передать границы по Y
-    setex(bufferLeftY, functionRank, NX, NYr, NZr, YLEFT);
-    setex(bufferRightY, functionRank, NX, NYr, NZr, YRIGHT);
-//    MPI_Sendrecv_replace(bufferLeftY, NX * NZr, MPI_DOUBLE, nextY, 0, nextY, 1, MPI_COMM_WORLD, &status);
-//    MPI_Sendrecv_replace(bufferRightY, NX * NZr, MPI_DOUBLE, prevY, 1, prevY, 0, MPI_COMM_WORLD, &status);
-    MPI_Isend(bufferLeftY, NX*NZr, MPI_DOUBLE, nextY, 0, MPI_COMM_WORLD, &reqs[0]);
-    MPI_Isend(bufferRightY, NX*NZr, MPI_DOUBLE, prevY, 1, MPI_COMM_WORLD, &reqs[1]);
-
-    MPI_Recv(bufferLeftY, NX*NZr, MPI_DOUBLE, nextY, 1, MPI_COMM_WORLD, &reqs[2]);
-    MPI_Recv(bufferRightY, NX*NZr, MPI_DOUBLE, prevY, 0, MPI_COMM_WORLD, &reqs[3]);
-//  принять и распаковать границы по Y
-    unpack(bufferLeftY, functionRank, NX, NYr, NZr, YLEFT);
-    unpack(bufferRightY, functionRank, NX, NYr, NZr, YRIGHT);
-
-    //  запоковать и передать границы по Z
-    setex(bufferDownZ, functionRank, NX, NYr, NZr, ZDOWN);
-    setex(bufferTopZ, functionRank, NX, NYr, NZr, ZTOP);
-//    MPI_Sendrecv_replace(bufferTopZ, NX * NYr, MPI_DOUBLE, nextZ, 3, nextZ, 4, MPI_COMM_WORLD, &status);
-//    MPI_Sendrecv_replace(bufferDownZ, NX * NYr, MPI_DOUBLE, prevZ, 4, prevZ, 3, MPI_COMM_WORLD, &status);
-    MPI_Isend(bufferTopZ, NX*NYr, MPI_DOUBLE, nextZ, 3, MPI_COMM_WORLD, &reqs[4]);
-    MPI_Isend(bufferDownZ, NX*NYr, MPI_DOUBLE, prevZ, 4, MPI_COMM_WORLD, &reqs[5]);
-
-    MPI_Recv(bufferTopZ, NX*NYr, MPI_DOUBLE, nextZ, 4, MPI_COMM_WORLD, &reqs[6]);
-    MPI_Recv(bufferDownZ, NX*NYr, MPI_DOUBLE, prevZ, 3, MPI_COMM_WORLD, &reqs[7]);
-
-
-//  принять и распаковать границы по Z
-    unpack(bufferDownZ, functionRank, NX, NYr, NZr, ZDOWN);
-    unpack(bufferTopZ, functionRank, NX, NYr, NZr, ZTOP);
-  }
-    multMV(&nextFunction, mat, functionRank);
-
-    tmp = functionRank;
-    function = nextFunction;
-    nextFunction = tmp;
-  }
-
-  //  *******************
-
+//  for (int t = 1; t <= 1; t++) {
+//////    TODO:
+//////    ТУТ должен быть обмен границ!
+////    Отправка граничных условий
+//
+//
+////  принять и распаковать границы по Z
+//    unpack(bufferDownZ, functionRank, NX, NYr, NZr, ZDOWN);
+//    unpack(bufferTopZ, functionRank, NX, NYr, NZr, ZTOP);
+//    multMV(&nextFunction, mat, functionRank);
+//
+//    tmp = functionRank;
+//    function = nextFunction;
+//    nextFunction = tmp;
+//
+//    //  *******************
+//  }
   if (rankP == ROOT) t1 = omp_get_wtime();
 
   printf("rank = %d\n",rankP);
 //        GATHER
 //  Нулевой процесс собирает сразу, остальные отсылают на сборку
-  if (rankP == ROOT) {
-    for (int z = 1; z < NZr; z++)
-      for (int y = 1; y < NYr; y++)
-        for (int x = 0; x < NX; x++)
-          function[x + (y-1)*NX + (z-1)*NX*NY] = functionRank[x + y*NX + z*NX*NYr];
-  }
-  else {
-    MPI_Rsend(functionRank, dimPart, MPI_DOUBLE, ROOT, 10, MPI_COMM_WORLD);
-  }
-//  Сбор в один вектор от всех процессов
-  if (rankP == ROOT) {
-    for (int rank = 1; rank < sizeP; rank++) {
-      MPI_Recv(functionRank, dimPart, MPI_DOUBLE, rank, 10, MPI_COMM_WORLD, &status);
-      for (int z = 1; z < NZr; z++)
-        for (int y = 1; y < NYr; y++)
-          for (int x = 0; x < NX; x++)
-            function[x + ((y-1)+(rank%2)*(NYr-2))*NX + ((z-1)+(rank/2)*(NZr-2))*NX*NY] =
-                functionRank[x + y*NX + z*NX*NYr];
-    }
-  }
+
+  gather_by_block(function, functionRank, NX, NY, NZ, NYr, NZr, gridComm);
 
   if (rankP == ROOT) {
     double diffTime = t1 - t0;
