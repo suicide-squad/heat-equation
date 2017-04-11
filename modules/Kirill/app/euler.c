@@ -18,6 +18,7 @@ const char pathSetting[] = "../../../../initial/setting.ini";
 const char pathFunction[] = "../../../../initial/function.txt";
 const char pathResult1D[] = "../../../../result/Kirill/euler3D_MPI.txt";
 const char pathResult3D[] = "../../../../result/Kirill/result_MPI.txt";
+const char pathResult32D[] = "../../../../result/Kirill/ter.txt";
 
 typedef enum {
   YRIGHT,
@@ -94,27 +95,14 @@ void unpack (double *ex, double *u, int NX, int NY, int NZ, op which) {
   return;
 }
 
-//void scatter_by_rows(double *function, double* functionZ, int NX, int NY, int NZ, int NYr, int NZr, MPI_Comm comm) {
-//  int size;
-//  MPI_Comm_size(comm, &size);
-//  printf("size %d\n", size);
-//  MPI_Scatter(function, NX*(NZr-2)*NY, MPI_DOUBLE, functionZ + NX*NY, NX*(NZr-2)*NY, MPI_DOUBLE, 0, comm);
-//  printf("YT!\n");
-//}
-
-void scatter_by_cols(double *function, double* functionChunk, int NX, int NY, int NZ, int NYr, int NZr, MPI_Comm comm) {
-
-  for (int z = 1; z < NZr - 1; z++)
-    MPI_Scatter(function + z*NY*NX, NX*(NYr-2), MPI_DOUBLE, functionChunk + NX, NX*(NYr-2), MPI_DOUBLE, 0, comm);
-}
-
-void gather_by_cols(double *function, double* functionChunk, int NX, int NY, int NZ, int NYr, int NZr, MPI_Comm comm) {
-
-  for (int z = 1; z < NZr-1; z++)
-    MPI_Gather(function + z*NY*NX, NX*(NYr-2), MPI_DOUBLE, functionChunk + NX, NX*(NYr-2), MPI_DOUBLE, 0, comm);
-}
-
-void scatter_by_block(double *function, double **functionRank, int NX, int NY, int NZ, int NYr, int NZr, MPI_Comm gridComm) {
+void scatter_by_block(double *function,
+                      double *functionRank,
+                      int NX,
+                      int NY,
+                      int NZ,
+                      int NYr,
+                      int NZr,
+                      MPI_Comm gridComm) {
   int ndim = 0;
   MPI_Cartdim_get(gridComm, &ndim);
   int dims[ndim], periods[ndim], gridCoords[ndim];
@@ -127,24 +115,21 @@ void scatter_by_block(double *function, double **functionRank, int NX, int NY, i
   MPI_Cart_sub(gridComm, remain_dims, &colComm);
 
   int rank;
-  MPI_Cart_rank(gridComm, gridCoords, &rank);
-  double *functionZ;
-  if (gridCoords[1] == 0) {
-    functionZ = (double *)malloc(sizeof(double)*NX*NY*NZr);
-    printf("z=%d y=%d r=%d\n", gridCoords[0], gridCoords[1], rank);
+  MPI_Cart_rank(gridComm, gridCoords,&rank);
+  double *functionZ = NULL;
+  printf("NZr-%d;NY-%d;NX-%d  r=%d\n",NZr,NY,NX, rank);
 
-//    scatter_by_rows(function, functionZ, NX, NY, NZ, NYr, NZr, colComm);
-    printf("dim %d dimPart %d\n", NX*NY*NZ, NX*NY*(NZr-2));
-    MPI_Scatter(function, NX*NY*(NZr - 2), MPI_DOUBLE, functionZ + NX*NY, NX*NY*(NZr - 2), MPI_DOUBLE, 0, colComm);
+  if (gridCoords[1] == 0) {
+    functionZ = (double *)malloc(sizeof(double)*NX*NY*(NZr+2));
+    MPI_Scatter(function, NX*NY*(NZr), MPI_DOUBLE, functionZ + NX*NY, NX*NY*(NZr), MPI_DOUBLE, 0, colComm);
   }
 
-  printf("scatter rows\n");
-  remain_dims[1] = 0; remain_dims[0] = 1;
+  printf("scatter rows %d\n", rank);
+  remain_dims[0] = 0; remain_dims[1] = 1;
   MPI_Cart_sub(gridComm, remain_dims, &rowComm);
 
-  *functionRank = (double *)malloc(sizeof(double)*NX*NYr*NZr);
-
-  scatter_by_cols(functionZ, *functionRank, NX, NY, NZ, NYr, NZr, rowComm);
+  for (int i = 1; i < NZr + 1; i++)
+    MPI_Scatter(functionZ + i*NX*NY, NX*(NYr), MPI_DOUBLE, functionRank + NX + i*NX*(NYr), NX*NYr, MPI_DOUBLE, 0, rowComm);
 
   if (gridCoords[1] == 0) free(functionZ);
 }
@@ -168,27 +153,30 @@ void gather_by_block(double *function,
   int remain_dims[ndim];
   remain_dims[0] = 1; remain_dims[1] = 0;
   MPI_Cart_sub(gridComm, remain_dims, &colComm);
-  remain_dims[1] = 0; remain_dims[0] = 1;
+  remain_dims[0] = 0; remain_dims[1] = 1;
   MPI_Cart_sub(gridComm, remain_dims, &rowComm);
-
-  printf("gather start cols!\n");
 
   double *functionZ;
   if (gridCoords[1] == 0) {
-    functionZ = (double *) malloc(sizeof(double) * NX * NY * NZr);
+    functionZ = (double *) malloc(sizeof(double) * NX * NY *NZr);
   }
 
-  gather_by_cols(functionZ, functionRank, NX, NY, NZ, NYr, NZr, rowComm);
-
+  for (int i = 0; i < NZr; i++)
+    MPI_Gather(functionRank + NX + (i+1)*(NYr)*NX, NX*(NYr), MPI_DOUBLE, functionZ + i*NX*NY, NX*(NYr), MPI_DOUBLE, 0, rowComm);
   printf("gather cols!\n");
 
 
-
   if (gridCoords[1] == 0) {
-    MPI_Gather(function, NX*NY*(NZr - 2), MPI_DOUBLE, functionZ + NX*NY, NX*NY*(NZr - 2), MPI_DOUBLE, 0, colComm);
+    MPI_Gather(functionZ,
+               NX * NY * (NZr),
+               MPI_DOUBLE,
+               function,
+               NX * NY * (NZr),
+               MPI_DOUBLE,
+               0,
+               colComm);
+    free(functionZ);
   }
-
-  if (gridCoords[1] == 0) free(functionZ);
 }
 
 
@@ -273,8 +261,8 @@ int main(int argc, char **argv) {
     blockYP = 1;
     blockZP = 1;
   }
-  NYr = NY / blockYP + 2;
-  NZr = NZ / blockZP + 2;
+  NYr = NY / blockYP;
+  NZr = NZ / blockZP;
 
   const int DIM_CART = 2;
 //  размер каждой размерности
@@ -293,7 +281,9 @@ int main(int argc, char **argv) {
   // Определение координат процесса в решетке
   MPI_Cart_coords(gridComm, rankP, DIM_CART, gridCoords);
 
-  scatter_by_block(function, &functionRank, NX, NY, NZ, NYr, NZr, gridComm);
+  functionRank = (double *)malloc(sizeof(double)*NX*(NYr+2)*(NZr+2));
+
+  scatter_by_block(function, functionRank, NX, NY, NZ, NYr, NZr, gridComm);
 
   printf("scatter finish!\n");
 
