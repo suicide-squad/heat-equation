@@ -62,7 +62,7 @@ int main(int argc, char **argv) {
     sizeTime = (size_t) ((setting.TFINISH - setting.TSTART) / setting.dt);
 
     #if ENABLE_PARALLEL
-      printf("PARALLEL VERSION!\n");
+      printf("PARALLEL VERSION 2.0!\n");
     #endif
 
     printf("TimeSize -\t%lu\n", sizeTime);
@@ -82,8 +82,7 @@ int main(int argc, char **argv) {
   }
 
   MPI_Bcast(&sizeTime, 1, MPI_UNSIGNED_LONG, ROOT, MPI_COMM_WORLD);
-  MPI_Bcast(&dim, 1, MPI_UNSIGNED_LONG, ROOT, MPI_COMM_WORLD);
-  MPI_Bcast(coeffs, 4, MPI_UNSIGNED_LONG, ROOT, MPI_COMM_WORLD);
+  MPI_Bcast(coeffs, 4, MPI_DOUBLE, ROOT, MPI_COMM_WORLD);
   MPI_Bcast(&NX, 1, MPI_UNSIGNED_LONG, ROOT, MPI_COMM_WORLD);
   MPI_Bcast(&NY, 1, MPI_UNSIGNED_LONG, ROOT, MPI_COMM_WORLD);
   MPI_Bcast(&NZ, 1, MPI_UNSIGNED_LONG, ROOT, MPI_COMM_WORLD);
@@ -128,8 +127,6 @@ int main(int argc, char **argv) {
   //  SCATTER
   scatter_by_block(u, u_chunk, NX, NY, NYr, NZr, gridComm);
 
-  printf("scatter finish!\n");
-
 //  TODO:
 //  При кубиках на границах достаточно выделять на + 1 (соседей с одной стороны нет)
 //  Если ранковый кубик не на границе, то нужно выделять по 2 соседа
@@ -161,7 +158,7 @@ int main(int argc, char **argv) {
 
   // ОСНОВНЫЕ ВЫЧИСЛЕНИЯ
 
-  for (int t = 1; t <= sizeTime; t++) {
+  for (int t = 1; t <= 1; t++) {
     //  ОБМЕН ГРАНИЦ ПО Y И Z
 
     //    Передача влево по Y

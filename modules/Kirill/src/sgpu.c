@@ -14,22 +14,11 @@ void pack(double *ex, double *u, int NX, int NY, int NZ, op which) {
           ex[x + z * NX] = u[x + 1 * NX + z * NX * NZ];
       break;
     }
-    case Y_LEFT_RECV: {
-      for (int z = 0; z < NZ; z++)
-        for (int x = 0; x < NX; x++)
-          ex[x + z * NX] = u[x + 0 * NX + z * NX * NZ];
-      break;
-    }
+
     case Y_RIGHT_SEND: {
       for (int z = 0; z < NZ; z++)
         for (int x = 0; x < NX; x++)
           ex[x + z * NX] = u[x + (NY - 2) * NX + z * NX * NZ];
-      break;
-    }
-    case Y_RIGHT_RECV: {
-      for (int z = 0; z < NZ; z++)
-        for (int x = 0; x < NX; x++)
-          ex[x + z * NX] = u[x + (NY - 1) * NX + z * NX * NZ];
       break;
     }
 
@@ -39,22 +28,10 @@ void pack(double *ex, double *u, int NX, int NY, int NZ, op which) {
           ex[x + y * NX] = u[x + y * NX + 1 * NX * NY];
       break;
     }
-    case Z_DOWN_RECV: {
-      for (int y = 0; y < NY; y++)
-        for (int x = 0; x < NX; x++)
-          ex[x + y * NX] = u[x + y * NX + 0 * NX * NY];
-      break;
-    }
     case Z_TOP_SEND: {
       for (int y = 0; y < NY; y++)
         for (int x = 0; x < NX; x++)
           ex[x + y * NX] = u[x + y * NX + (NZ - 2) * NX * NY];
-      break;
-    }
-    case Z_TOP_RECV: {
-      for (int y = 0; y < NY; y++)
-        for (int x = 0; x < NX; x++)
-          ex[x + y * NX] = u[x + y * NX + (NZ - 1) * NX * NY];
       break;
     }
   }
@@ -63,22 +40,10 @@ void pack(double *ex, double *u, int NX, int NY, int NZ, op which) {
 
 void unpack (double *ex, double *u, int NX, int NY, int NZ, op which) {
   switch ( which ) {
-    case Y_LEFT_SEND: {
-      for (int z = 0; z < NZ; z++)
-        for (int x = 0; x < NX; x++)
-          u[x + 1 * NX + z * NX * NZ] = ex[x + z * NX];
-      break;
-    }
     case Y_LEFT_RECV: {
       for (int z = 0; z < NZ; z++)
         for (int x = 0; x < NX; x++)
           u[x + 0 * NX + z * NX * NZ] = ex[x + z * NX];
-      break;
-    }
-    case Y_RIGHT_SEND: {
-      for (int z = 0; z < NZ; z++)
-        for (int x = 0; x < NX; x++)
-          u[x + (NY - 2) * NX + z * NX * NZ] = ex[x + z * NX];
       break;
     }
     case Y_RIGHT_RECV: {
@@ -87,23 +52,10 @@ void unpack (double *ex, double *u, int NX, int NY, int NZ, op which) {
           u[x + (NY - 1) * NX + z * NX * NZ] = ex[x + z * NX];
       break;
     }
-
-    case Z_DOWN_SEND: {
-      for (int y = 0; y < NY; y++)
-        for (int x = 0; x < NX; x++)
-          u[x + y * NX + 1 * NX * NY] = ex[x + y * NX];
-      break;
-    }
     case Z_DOWN_RECV: {
       for (int y = 0; y < NY; y++)
         for (int x = 0; x < NX; x++)
           u[x + y * NX + 0 * NX * NY] = ex[x + y * NX];
-      break;
-    }
-    case Z_TOP_SEND: {
-      for (int y = 0; y < NY; y++)
-        for (int x = 0; x < NX; x++)
-          u[x + y * NX + (NZ - 2) * NX * NY] = ex[x + y * NX];
       break;
     }
     case Z_TOP_RECV: {
