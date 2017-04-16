@@ -4,6 +4,9 @@
 #include "SparseMatrix.h"
 
 using std::string;
+using std::cout;
+using std::endl;
+using std::flush;
 
 double getVectorValue(double *vect, int x, int y, int z, Task task);
 int main(int argc, char** argv) {
@@ -13,7 +16,7 @@ int main(int argc, char** argv) {
     const int ROOT = 0;
 //    const int ADD_CELL = 2;  // Additional cell (in each size)
 
-    int sizeP = 0, rankP = 0;
+    int sizeP, rankP;
     MPI_Status status;
 
     MPI_Init(&argc, &argv);
@@ -26,8 +29,10 @@ int main(int argc, char** argv) {
 
     if (rankP == ROOT) {
         // File variables
-        string functionFile = "../../initial/function.txt";
-        string settingFile = "../../initial/setting.ini";
+//        string functionFile = "../../initial/function.txt";
+        string functionFile = "../../initial_test/function.txt";
+//        string settingFile = "../../initial/setting.ini";
+        string settingFile = "../../initial_test/setting.ini";
 
         // Read task settings
         initTaskUsingFile(task, settingFile);
@@ -57,6 +62,10 @@ int main(int argc, char** argv) {
     MPI_Bcast(&task.dt, 1, MPI_DOUBLE, ROOT, MPI_COMM_WORLD);
 
 
+    if (sizeP % 4 != 0) {
+        cout << "Error! Wrong proc count" << endl;
+        exit(0);
+    }
 
     int realSizeX = task.nX + 2;
     int realSizeY = realSizeX;
@@ -71,92 +80,125 @@ int main(int argc, char** argv) {
 //    int block_size_add = block_size + ADD_CELL * 2;
 
     // Generate data for send
-    double *sendvect = new double [sizeP * proc_vect_size];
-    for (int l = 0; l < sizeP; ++l) {
-        for (int k = 0; k < proc_nZ; ++k) {
-            for (int i = 0; i < block_size; ++i) {
-                sendvect[l*proc_vect_size + k * block_size + i]
-                        = vect[proc_nZ * realSizeZ * l + k * block_size+ i];
+    double *sendvect;
+
+    if (rankP == ROOT) {
+        sendvect = new double [sizeP * proc_vect_size];
+
+        for (int i = 0; i < sizeP * proc_vect_size; ++i) {
+            sendvect[i] = -1000;
+        }
+
+        cout << "sizeP: " << sizeP << endl;
+        cout << "proc_nX: " << proc_nX << endl;
+        cout << "proc_nY: " << proc_nY << endl;
+        cout << "proc_nZ: " << proc_nZ << endl;
+        cout << "block_size: " << block_size << endl;
+        cout << "proc_vect_size: " << proc_vect_size << endl;
+
+//        cout << ": " <<  << endl;
+
+        for (int l = 0; l < sizeP; ++l) {
+            for (int k = 0; k < proc_nZ; ++k) {
+                for (int i = 0; i < block_size; ++i) {
+                    sendvect[l * proc_vect_size + k * block_size + i]
+                            = vect[(l % lineSizeP) * lineSizeP * realSizeZ + k * realSizeZ + i];
+//                    cout << "l * proc_vect_size + k * block_size + i: " << l * proc_vect_size + k * block_size + i << endl;
+//                    cout << "proc_nZ * realSizeZ * l + k * block_size + i: " << proc_nZ * realSizeZ * l + k * block_size + i << endl;
+                }
+//                if (k == 0) {
+//                    for (int i = 0; i < sizeP * proc_vect_size; ++i) {
+//                        cout << sendvect[i] << endl;
+//                    }
+//                }
             }
         }
     }
 
-
-    int *displs = new int[sizeP];
-    int *sendcounts = new int[sizeP];
-
-
-    // MAY NOT WORK WELL
-    for (int l = 0; l < sizeP; ++l) {
-        displs[l] = proc_nZ * realSizeZ * l;
-        sendcounts[l] = realSizeY * proc_nY;     // we send half part
+    if (rankP == ROOT) {
+        for (int i = 0; i < sizeP * proc_vect_size; ++i) {
+            cout << i << "  " << sendvect[i] << endl;
+        }
     }
 
-    // Sending should be in two steps
-
-    double *proc_vect = new double[proc_vect_size];
-
-    // STEP 1
-    MPI_Scatterv(vect, sendcounts, displs, MPI_DOUBLE,
-                 proc_vect, proc_vect_size, MPI_DOUBLE, ROOT, MPI_COMM_WORLD);
 
 
-
-    // Prepare STEP 2
-
-    // MAY NOT WORK WELL
-    for (int l = 0; l < sizeP; ++l) {
-        displs[l] = proc_nZ * realSizeZ * l;
-        sendcounts[l] = realSizeY * proc_nY;     // we send half part
-    }
-
-    // STEP 1
-    MPI_Scatterv(vect, sendcounts, displs, MPI_DOUBLE,
-                 proc_vect, proc_vect_size, MPI_DOUBLE, ROOT, MPI_COMM_WORLD);
-
-
-
-
-    // vector time-index for loop
-    prevTime = 0;
-    currTime = 1;
-
-    // value for the matrix
-    MatrixValue matrixValue;
-    matrixValue.x1 = (task.sigma * task.dt) / (task.timeStepX * task.timeStepX);
-    matrixValue.y1 = (task.sigma * task.dt) / (task.timeStepY * task.timeStepY);
-    matrixValue.z1 = (task.sigma * task.dt) / (task.timeStepZ * task.timeStepZ);
-    matrixValue.x2Comp = (1 - 2 * matrixValue.x1 - 2 * matrixValue.y1 - 2 * matrixValue.z1);
-
-    // init and fill sparseMatrix
-    SparseMatrix spMat;
-    int sparseMatrixSize = 9 * task.nX * task.nY * task.nZ;
-
-    spMatrixInit(spMat, sparseMatrixSize, task.fullVectSize);
-    fillMatrix3d6Expr(spMat, matrixValue, task.nX, task.nY, task.nZ);
-
-
-
-    // Calculating
-    time_S = omp_get_wtime();
-
-    for (double j = 0; j < task.tFinish; j += task.dt) {
-        multiplicateVector(spMat, vect[prevTime], vect[currTime], task.fullVectSize);
-        prevTime = (prevTime + 1) % 2;
-        currTime = (currTime + 1) % 2;
-    }
-    time_E = omp_get_wtime();
-    printf("Run time %.15lf\n", time_E-time_S);
-
-
-    // Output
-    FILE *outfile = fopen("../../result/Sergey/Sergey_Euler.txt", "w");
-
-    double outData;
-    for (int i = 1; i <= task.nX; ++i) {
-        fprintf(outfile, "%2.15le\n", getVectorValue(vect[0],i,0,0,task));
-
-    }
+//    int *displs = new int[sizeP];
+//    int *sendcounts = new int[sizeP];
+//
+//
+//    // MAY NOT WORK WELL
+//    for (int l = 0; l < sizeP; ++l) {
+//        displs[l] = proc_nZ * realSizeZ * l;
+//        sendcounts[l] = realSizeY * proc_nY;     // we send half part
+//    }
+//
+//    // Sending should be in two steps
+//
+//    double *proc_vect = new double[proc_vect_size];
+//
+//    // STEP 1
+//    MPI_Scatterv(vect, sendcounts, displs, MPI_DOUBLE,
+//                 proc_vect, proc_vect_size, MPI_DOUBLE, ROOT, MPI_COMM_WORLD);
+//
+//
+//
+//    // Prepare STEP 2
+//
+//    // MAY NOT WORK WELL
+//    for (int l = 0; l < sizeP; ++l) {
+//        displs[l] = proc_nZ * realSizeZ * l;
+//        sendcounts[l] = realSizeY * proc_nY;     // we send half part
+//    }
+//
+//    // STEP 1
+//    MPI_Scatterv(vect, sendcounts, displs, MPI_DOUBLE,
+//                 proc_vect, proc_vect_size, MPI_DOUBLE, ROOT, MPI_COMM_WORLD);
+//
+//
+//
+//
+//    // vector time-index for loop
+//    prevTime = 0;
+//    currTime = 1;
+//
+//    // value for the matrix
+//    MatrixValue matrixValue;
+//    matrixValue.x1 = (task.sigma * task.dt) / (task.timeStepX * task.timeStepX);
+//    matrixValue.y1 = (task.sigma * task.dt) / (task.timeStepY * task.timeStepY);
+//    matrixValue.z1 = (task.sigma * task.dt) / (task.timeStepZ * task.timeStepZ);
+//    matrixValue.x2Comp = (1 - 2 * matrixValue.x1 - 2 * matrixValue.y1 - 2 * matrixValue.z1);
+//
+//    // init and fill sparseMatrix
+//    SparseMatrix spMat;
+//    int sparseMatrixSize = 9 * task.nX * task.nY * task.nZ;
+//
+//    spMatrixInit(spMat, sparseMatrixSize, task.fullVectSize);
+//    fillMatrix3d6Expr(spMat, matrixValue, task.nX, task.nY, task.nZ);
+//
+//
+//
+//    // Calculating
+//    time_S = omp_get_wtime();
+//
+//    for (double j = 0; j < task.tFinish; j += task.dt) {
+//        multiplicateVector(spMat, vect[prevTime], vect[currTime], task.fullVectSize);
+//        prevTime = (prevTime + 1) % 2;
+//        currTime = (currTime + 1) % 2;
+//    }
+//    time_E = omp_get_wtime();
+//    printf("Run time %.15lf\n", time_E-time_S);
+//
+//
+//    // Output
+//    FILE *outfile = fopen("../../result/Sergey/Sergey_Euler.txt", "w");
+//
+//    double outData;
+//    for (int i = 1; i <= task.nX; ++i) {
+//        fprintf(outfile, "%2.15le\n", getVectorValue(vect[0],i,0,0,task));
+//
+//    }
+    MPI_Finalize();
 }
 
 double getVectorValue(double *vect, int x, int y, int z, Task task) {
