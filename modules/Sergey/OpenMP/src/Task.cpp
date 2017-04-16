@@ -82,3 +82,22 @@ int initMemoryReadData(double **& vect, string file, Task &task) {
     fclose(inFunctionfile);
     return 0;
 }
+
+int initMemoryReadDataMPI(double *& vect, string file, Task &task) {
+    FILE *inFunctionfile = fopen(file.c_str(), "r");
+
+    task.fullVectSize = (task.nX + 2) * (task.nY) * (task.nZ);
+    vect = new double[task.fullVectSize];
+
+    /// Read file
+    for (int k = 0; k < task.nZ; k++) {
+        for (int j = 0; j < task.nY; ++j) {
+            for (int i = 1; i < task.nX + 1; ++i) {
+                fscanf(inFunctionfile, "%lf\n", &vect[i + (task.nX + 2) * j + (task.nX+2) * task.nY * k]);
+            }
+        }
+    }
+
+    fclose(inFunctionfile);
+    return 0;
+}

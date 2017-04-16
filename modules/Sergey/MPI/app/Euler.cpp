@@ -1,5 +1,5 @@
 #include <iostream>
-#include <omp.h>
+#include <mpi.h>
 #include "Task.h"
 #include "SparseMatrix.h"
 
@@ -9,21 +9,100 @@ double getVectorValue(double *vect, int x, int y, int z, Task task);
 int main(int argc, char** argv) {
 
     // Timing variables
-    double time_S, time_E;
-    int prevTime, currTime;
+    double startTime, endTime;
+    const int ROOT = 0;
+//    const int ADD_CELL = 2;  // Additional cell (in each size)
 
-    // File variables
-    string functionFile = "../../initial/function.txt";
-    string settingFile = "../../initial/setting.ini";
+    int sizeP = 0, rankP = 0;
+    MPI_Status status;
 
-    // Read task settings
+    MPI_Init(&argc, &argv);
+    MPI_Comm_size(MPI_COMM_WORLD, &sizeP);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rankP);
+
     Task task;
-    initTaskUsingFile(task, settingFile);
-    setTimestep(task);
 
-    // Init memory & read function file
-    double** vect;
-    initMemoryReadData(vect, functionFile, task);
+    double *vect;
+
+    if (rankP == ROOT) {
+        // File variables
+        string functionFile = "../../initial/function.txt";
+        string settingFile = "../../initial/setting.ini";
+
+        // Read task settings
+        initTaskUsingFile(task, settingFile);
+        setTimestep(task);
+
+        // Init memory & read function file
+        initMemoryReadDataMPI(vect, functionFile, task);
+    }
+
+    MPI_Bcast(&task.xStart, 1, MPI_DOUBLE, ROOT, MPI_COMM_WORLD);
+    MPI_Bcast(&task.xEnd, 1, MPI_DOUBLE, ROOT, MPI_COMM_WORLD);
+    MPI_Bcast(&task.yStart, 1, MPI_DOUBLE, ROOT, MPI_COMM_WORLD);
+    MPI_Bcast(&task.yEnd, 1, MPI_DOUBLE, ROOT, MPI_COMM_WORLD);
+    MPI_Bcast(&task.zStart, 1, MPI_DOUBLE, ROOT, MPI_COMM_WORLD);
+    MPI_Bcast(&task.zEnd, 1, MPI_DOUBLE, ROOT, MPI_COMM_WORLD);
+    MPI_Bcast(&task.sigma, 1, MPI_DOUBLE, ROOT, MPI_COMM_WORLD);
+    MPI_Bcast(&task.bc, 1, MPI_INT, ROOT, MPI_COMM_WORLD);
+    MPI_Bcast(&task.timeStepX, 1, MPI_DOUBLE, ROOT, MPI_COMM_WORLD);
+    MPI_Bcast(&task.timeStepY, 1, MPI_DOUBLE, ROOT, MPI_COMM_WORLD);
+    MPI_Bcast(&task.timeStepZ, 1, MPI_DOUBLE, ROOT, MPI_COMM_WORLD);
+    MPI_Bcast(&task.nX, 1, MPI_INT, ROOT, MPI_COMM_WORLD);
+    MPI_Bcast(&task.nY, 1, MPI_INT, ROOT, MPI_COMM_WORLD);
+    MPI_Bcast(&task.nZ, 1, MPI_INT, ROOT, MPI_COMM_WORLD);
+    MPI_Bcast(&task.fullVectSize, 1, MPI_INT, ROOT, MPI_COMM_WORLD);
+    MPI_Bcast(&task.tStart, 1, MPI_DOUBLE, ROOT, MPI_COMM_WORLD);
+    MPI_Bcast(&task.tFinish, 1, MPI_DOUBLE, ROOT, MPI_COMM_WORLD);
+    MPI_Bcast(&task.dt, 1, MPI_DOUBLE, ROOT, MPI_COMM_WORLD);
+
+
+
+    int realSizeX = task.nX + 2;
+    int realSizeY = realSizeX;
+    int realSizeZ = realSizeY * task.nY;
+//
+    int proc_nX = realSizeX / sizeP;
+    int proc_nY = task.nY / sizeP;
+    int proc_nZ = task.nZ / sizeP;
+    int proc_vect_size = proc_nX * proc_nY * proc_nZ;
+//    int block_size_add = block_size + ADD_CELL * 2;
+
+    // Generate data of postions
+    int *displs = new int[sizeP];
+    int *sendcounts = new int[sizeP];
+
+
+    // MAY NOT WORK WELL
+    for (int l = 0; l < sizeP; ++l) {
+        displs[l] = proc_nZ * realSizeZ * l;
+        sendcounts[l] = realSizeY * proc_nY;     // we send half part
+    }
+
+    // Sending should be in two steps
+
+    double *proc_vect = new double[proc_vect_size];
+
+    // STEP 1
+    MPI_Scatterv(vect, sendcounts, displs, MPI_DOUBLE,
+                 proc_vect, proc_vect_size, MPI_DOUBLE, ROOT, MPI_COMM_WORLD);
+
+
+
+    // Prepare STEP 2
+
+    // MAY NOT WORK WELL
+    for (int l = 0; l < sizeP; ++l) {
+        displs[l] = proc_nZ * realSizeZ * l;
+        sendcounts[l] = realSizeY * proc_nY;     // we send half part
+    }
+
+    // STEP 1
+    MPI_Scatterv(vect, sendcounts, displs, MPI_DOUBLE,
+                 proc_vect, proc_vect_size, MPI_DOUBLE, ROOT, MPI_COMM_WORLD);
+
+
+
 
     // vector time-index for loop
     prevTime = 0;
