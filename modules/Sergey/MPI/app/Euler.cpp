@@ -61,14 +61,27 @@ int main(int argc, char** argv) {
     int realSizeX = task.nX + 2;
     int realSizeY = realSizeX;
     int realSizeZ = realSizeY * task.nY;
-//
-    int proc_nX = realSizeX / sizeP;
-    int proc_nY = task.nY / sizeP;
-    int proc_nZ = task.nZ / sizeP;
+
+    int lineSizeP = sizeP / 2;
+    int proc_nX = realSizeX;
+    int proc_nY = task.nY / lineSizeP;
+    int proc_nZ = task.nZ / lineSizeP;
     int proc_vect_size = proc_nX * proc_nY * proc_nZ;
+    int block_size = proc_nX * proc_nY;
 //    int block_size_add = block_size + ADD_CELL * 2;
 
-    // Generate data of postions
+    // Generate data for send
+    double *sendvect = new double [sizeP * proc_vect_size];
+    for (int l = 0; l < sizeP; ++l) {
+        for (int k = 0; k < proc_nZ; ++k) {
+            for (int i = 0; i < block_size; ++i) {
+                sendvect[l*proc_vect_size + k * block_size + i]
+                        = vect[proc_nZ * realSizeZ * l + k * block_size+ i];
+            }
+        }
+    }
+
+
     int *displs = new int[sizeP];
     int *sendcounts = new int[sizeP];
 
