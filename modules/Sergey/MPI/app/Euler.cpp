@@ -29,10 +29,10 @@ int main(int argc, char** argv) {
 
     if (rankP == ROOT) {
         // File variables
-//        string functionFile = "../../initial/function.txt";
-        string functionFile = "../../initial_test/function.txt";
-//        string settingFile = "../../initial/setting.ini";
-        string settingFile = "../../initial_test/setting.ini";
+        string functionFile = "../../initial/function.txt";
+//        string functionFile = "../../initial_test/function.txt";
+        string settingFile = "../../initial/setting.ini";
+//        string settingFile = "../../initial_test/setting.ini";
 
         // Read task settings
         initTaskUsingFile(task, settingFile);
@@ -135,7 +135,7 @@ int main(int argc, char** argv) {
     }
 
 
-    MPI_Scatterv(vect, sendcounts, displs, MPI_DOUBLE,
+    MPI_Scatterv(sendvect, sendcounts, displs, MPI_DOUBLE,
                  proc_vect[0], proc_vect_size, MPI_DOUBLE, ROOT, MPI_COMM_WORLD);
 
 
@@ -170,16 +170,16 @@ int main(int argc, char** argv) {
     double *right_vect = new double[send_vect_size];
 
     for (double j = 0; j < task.tFinish; j += task.dt) {
-//        multiplicateVector(spMat, proc_vect[0], proc_vect[1], proc_vect_size);
+        multiplicateVector(spMat, proc_vect[prevTime], proc_vect[currTime], proc_vect_size);
 
         // After each iteration swap data
 
         // 1 and 2 iter - IT'S TIME TO REPACK
         for (int z = 0; z < proc_nZ; ++z) {
             for (int i = 0; i < proc_nX; ++i) {
-                left_vect[z * proc_nX + i] = proc_vect[1][z * proc_realSizeZ + i];
+                left_vect[z * proc_nX + i] = proc_vect[currTime][z * proc_realSizeZ + i];
                 right_vect[z * proc_nX + i]
-                        = proc_vect[1][z * proc_realSizeZ + (proc_nY - 1) * proc_realSizeY + i];
+                        = proc_vect[currTime][z * proc_realSizeZ + (proc_nY - 1) * proc_realSizeY + i];
             }
         }
 
@@ -194,8 +194,8 @@ int main(int argc, char** argv) {
 
         for (int z = 0; z < proc_nZ; ++z) {
             for (int i = 0; i < proc_nX; ++i) {
-                proc_vect[1][z * proc_realSizeZ + i] = left_vect[z * proc_nX + i];
-                proc_vect[1][z * proc_realSizeZ + (proc_nY - 1) * proc_realSizeY + i] = right_vect[z * proc_nX + i];
+                proc_vect[currTime][z * proc_realSizeZ + i] = left_vect[z * proc_nX + i];
+                proc_vect[currTime][z * proc_realSizeZ + (proc_nY - 1) * proc_realSizeY + i] = right_vect[z * proc_nX + i];
             }
         }
 
@@ -208,34 +208,56 @@ int main(int argc, char** argv) {
         // 1 and 2 iter - in one field in the memory
         send_vect_size = proc_nY * proc_nX;
         // top
-        MPI_Sendrecv(proc_vect[1], send_vect_size, MPI_DOUBLE, top_proc, 0,
-                     proc_vect[1], send_vect_size, MPI_DOUBLE, bottom_proc, 0, MPI_COMM_WORLD, &status);
+        MPI_Sendrecv(proc_vect[currTime], send_vect_size, MPI_DOUBLE, top_proc, 0,
+                     proc_vect[currTime], send_vect_size, MPI_DOUBLE, bottom_proc, 0, MPI_COMM_WORLD, &status);
 
         // bottom
         int offset = proc_vect_size - send_vect_size;
-        MPI_Sendrecv(proc_vect[1] + offset, send_vect_size, MPI_DOUBLE, bottom_proc, 0,
-                     proc_vect[1] + offset, send_vect_size, MPI_DOUBLE, top_proc, 0, MPI_COMM_WORLD, &status);
+        MPI_Sendrecv(proc_vect[currTime] + offset, send_vect_size, MPI_DOUBLE, bottom_proc, 0,
+                     proc_vect[currTime] + offset, send_vect_size, MPI_DOUBLE, top_proc, 0, MPI_COMM_WORLD, &status);
 
 
+        int boundaries_offset = proc_realSizeY;
         // BOUNDARIES!
-
+        for (int k = 0; k < proc_nY * proc_nZ; ++k) {
+            proc_vect[currTime][k * boundaries_offset] = proc_vect[currTime][k * boundaries_offset + 1];
+            proc_vect[currTime][k * boundaries_offset + proc_nX - 1] =
+                    proc_vect[currTime][k * boundaries_offset + proc_nX - 2];
+        }
         prevTime = (prevTime + 1) % 2;
         currTime = (currTime + 1) % 2;
     }
 
+    // And now we should scatter it in one vector...
 
-    endTime = MPI_Wtime();
-    printf("Run time %.15lf\n", endTime - startTime);
-//
-//
-//    // Output
-//    FILE *outfile = fopen("../../result/Sergey/Sergey_Euler.txt", "w");
-//
-//    double outData;
-//    for (int i = 1; i <= task.nX; ++i) {
-//        fprintf(outfile, "%2.15le\n", getVectorValue(vect[0],i,0,0,task));
-//
-//    }
+    MPI_Gather(proc_vect[0], proc_vect_size, MPI_DOUBLE,
+               sendvect, proc_vect_size, MPI_DOUBLE, ROOT, MPI_COMM_WORLD);
+
+    if (rankP == ROOT) {
+        for (int l = 0; l < sizeP; ++l) {
+            for (int k = 0; k < proc_nZ; ++k) {
+                for (int i = 0; i < block_size; ++i) {
+                    vect[(l % lineSizeP) * lineSizeP * realSizeZ + k * realSizeZ + i] =
+                            sendvect[l * proc_vect_size + k * block_size + i];
+                }
+            }
+        }
+    }
+
+    if (rankP == ROOT) {
+        endTime = MPI_Wtime();
+        printf("Run time %.15lf\n", endTime - startTime);
+
+
+        // Output
+        FILE *outfile = fopen("../../result/Sergey/Sergey_Euler_MPI.txt", "w");
+
+        double outData;
+        for (int i = 1; i <= task.nX; ++i) {
+            fprintf(outfile, "%2.15le\n", getVectorValue(vect, i, 0, 0, task));
+
+        }
+    }
     MPI_Finalize();
 }
 
