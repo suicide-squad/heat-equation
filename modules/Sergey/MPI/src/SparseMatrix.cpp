@@ -140,6 +140,87 @@ void fillMatrix3d6Expr(SparseMatrix &sp, MatrixValue &taskexpr, int sizeX, int s
     sp.pointerB[pIndex] = index + 1;   //end
 }
 
+void fillMatrix3d6Expr_wo_boundaries(SparseMatrix &sp, MatrixValue &taskexpr, int sizeX, int sizeY, int sizeZ) {
+    int realSizeX = sizeX + 2;
+    int realSizeY = realSizeX;
+    int realSizeZ = realSizeY * sizeY;
+    int index = 0;
+    int pIndex = 0;
+
+
+    int sectionStart = 0;
+    for (int z = 0; z < sizeZ; ++z) {
+        for (int y = 0; y < sizeY ; ++y) {
+            sectionStart = z * realSizeZ + y * realSizeY;
+
+            /** Boundaries rule
+             *  If we on the edge, we should use same expression (line with parametrs), as the line after.
+             *  If it's first line the pattern for her is line two. (+1)
+             *  If it's last line, pattern - previous line.         (-1)
+             *  Realization - fixes value, whose start to work, if we on the boundaries, joins @var x
+             *  @var fixBounds
+             */
+
+            int fixBounds = 0;
+
+            for (int x = 0; x < realSizeX; ++x) {
+                if (x == 0 ) {
+                    fixBounds = 1;
+                } else if ((x + 1) == realSizeX) {
+                    fixBounds = -1;
+                }
+                // Z first
+                sp.values[index] = taskexpr.z1;
+                sp.columns[index] = z == 0 ?
+                                    fixBounds + x + sectionStart + realSizeZ * (sizeZ - 1) :
+                                    fixBounds + x + sectionStart - realSizeZ;
+                sp.pointerB[pIndex++] = index;
+                ++index;
+
+
+                // Y first
+                sp.values[index] = taskexpr.y1;
+                sp.columns[index] = y == 0 ?
+                                    fixBounds + x + sectionStart + realSizeY * (sizeY - 1) :
+                                    fixBounds + x + sectionStart - realSizeY;
+                ++index;
+
+                // X Group center
+                sp.values[index] = taskexpr.x1;
+                sp.columns[index] = fixBounds + x - 1;
+                ++index;
+
+                sp.values[index] = taskexpr.x2Comp;
+                sp.columns[index] = fixBounds + x;
+                ++index;
+
+                sp.values[index] = taskexpr.x1;
+                sp.columns[index] = fixBounds + x + 1;
+                ++index;
+
+                // Y second
+                sp.values[index] = taskexpr.y1;
+                sp.columns[index] = y == sizeY - 1?
+                                    fixBounds + x + sectionStart - realSizeY * (sizeY - 1) :
+                                    fixBounds + x + sectionStart + realSizeY;
+                ++index;
+
+                // Z second
+                sp.values[index] = taskexpr.z1;
+                sp.columns[index] = z == sizeZ - 1 ?
+                                    fixBounds + x + sectionStart - realSizeZ * (sizeZ - 1) :
+                                    fixBounds + x + sectionStart + realSizeZ;
+                ++index;
+
+                // afterloop bound fix value clearing
+                fixBounds = 0;
+            }
+        }
+    }
+
+    sp.pointerB[pIndex] = index + 1;   //end
+}
+
 void printVectors(SparseMatrix &sp) {
     printf("values\n");
     for (int i = 0; i < sp._size; ++i) {

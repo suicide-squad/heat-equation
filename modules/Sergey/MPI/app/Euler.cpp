@@ -115,79 +115,117 @@ int main(int argc, char** argv) {
         }
     }
 
-    if (rankP == ROOT) {
-        for (int i = 0; i < sizeP * proc_vect_size; ++i) {
-            cout << i << "  " << sendvect[i] << endl;
-        }
+//    if (rankP == ROOT) {
+//        for (int i = 0; i < sizeP * proc_vect_size; ++i) {
+//            cout << i << "  " << sendvect[i] << endl;
+//        }
+//    }
+
+
+    int *displs = new int[sizeP];
+    int *sendcounts = new int[sizeP];
+
+    double **proc_vect = new double*[2];
+    proc_vect[0] = new double[proc_vect_size];
+    proc_vect[1] = new double[proc_vect_size];
+
+    for (int l = 0; l < sizeP; ++l) {
+        displs[l] = proc_vect_size * l;
+        sendcounts[l] = proc_vect_size;     // we send half part
     }
 
 
+    MPI_Scatterv(vect, sendcounts, displs, MPI_DOUBLE,
+                 proc_vect[0], proc_vect_size, MPI_DOUBLE, ROOT, MPI_COMM_WORLD);
 
-//    int *displs = new int[sizeP];
-//    int *sendcounts = new int[sizeP];
-//
-//
-//    // MAY NOT WORK WELL
-//    for (int l = 0; l < sizeP; ++l) {
-//        displs[l] = proc_nZ * realSizeZ * l;
-//        sendcounts[l] = realSizeY * proc_nY;     // we send half part
-//    }
-//
-//    // Sending should be in two steps
-//
-//    double *proc_vect = new double[proc_vect_size];
-//
-//    // STEP 1
-//    MPI_Scatterv(vect, sendcounts, displs, MPI_DOUBLE,
-//                 proc_vect, proc_vect_size, MPI_DOUBLE, ROOT, MPI_COMM_WORLD);
-//
-//
-//
-//    // Prepare STEP 2
-//
-//    // MAY NOT WORK WELL
-//    for (int l = 0; l < sizeP; ++l) {
-//        displs[l] = proc_nZ * realSizeZ * l;
-//        sendcounts[l] = realSizeY * proc_nY;     // we send half part
-//    }
-//
-//    // STEP 1
-//    MPI_Scatterv(vect, sendcounts, displs, MPI_DOUBLE,
-//                 proc_vect, proc_vect_size, MPI_DOUBLE, ROOT, MPI_COMM_WORLD);
-//
-//
-//
-//
-//    // vector time-index for loop
-//    prevTime = 0;
-//    currTime = 1;
-//
-//    // value for the matrix
-//    MatrixValue matrixValue;
-//    matrixValue.x1 = (task.sigma * task.dt) / (task.timeStepX * task.timeStepX);
-//    matrixValue.y1 = (task.sigma * task.dt) / (task.timeStepY * task.timeStepY);
-//    matrixValue.z1 = (task.sigma * task.dt) / (task.timeStepZ * task.timeStepZ);
-//    matrixValue.x2Comp = (1 - 2 * matrixValue.x1 - 2 * matrixValue.y1 - 2 * matrixValue.z1);
-//
-//    // init and fill sparseMatrix
-//    SparseMatrix spMat;
-//    int sparseMatrixSize = 9 * task.nX * task.nY * task.nZ;
-//
-//    spMatrixInit(spMat, sparseMatrixSize, task.fullVectSize);
-//    fillMatrix3d6Expr(spMat, matrixValue, task.nX, task.nY, task.nZ);
-//
-//
-//
-//    // Calculating
-//    time_S = omp_get_wtime();
-//
-//    for (double j = 0; j < task.tFinish; j += task.dt) {
-//        multiplicateVector(spMat, vect[prevTime], vect[currTime], task.fullVectSize);
-//        prevTime = (prevTime + 1) % 2;
-//        currTime = (currTime + 1) % 2;
-//    }
-//    time_E = omp_get_wtime();
-//    printf("Run time %.15lf\n", time_E-time_S);
+
+    // value for the matrix
+    MatrixValue matrixValue;
+    matrixValue.x1 = (task.sigma * task.dt) / (task.timeStepX * task.timeStepX);
+    matrixValue.y1 = (task.sigma * task.dt) / (task.timeStepY * task.timeStepY);
+    matrixValue.z1 = (task.sigma * task.dt) / (task.timeStepZ * task.timeStepZ);
+    matrixValue.x2Comp = (1 - 2 * matrixValue.x1 - 2 * matrixValue.y1 - 2 * matrixValue.z1);
+
+    // init and fill sparseMatrix
+    SparseMatrix spMat;
+    int sparseMatrixSize = 9 * proc_nX * proc_nY * proc_nZ;
+
+    spMatrixInit(spMat, sparseMatrixSize, proc_vect_size);
+
+//    cout << "proc_vect_size: " << proc_vect_size << endl;
+    // КОСТЫЛИИИИИИИИИИИИИИИИИи
+    fillMatrix3d6Expr_wo_boundaries(spMat, matrixValue, proc_nX - 2, proc_nY, proc_nZ);
+
+
+    int proc_realSizeY = realSizeX;
+    int proc_realSizeZ = proc_realSizeY * proc_nY;
+
+    int prevTime = 0;
+    int currTime = 1;
+
+    startTime = MPI_Wtime();
+
+    int send_vect_size = proc_nZ * proc_nX; // Because nY don't involved
+    double *left_vect = new double[send_vect_size];
+    double *right_vect = new double[send_vect_size];
+
+    for (double j = 0; j < task.tFinish; j += task.dt) {
+//        multiplicateVector(spMat, proc_vect[0], proc_vect[1], proc_vect_size);
+
+        // After each iteration swap data
+
+        // 1 and 2 iter - IT'S TIME TO REPACK
+        for (int z = 0; z < proc_nZ; ++z) {
+            for (int i = 0; i < proc_nX; ++i) {
+                left_vect[z * proc_nX + i] = proc_vect[1][z * proc_realSizeZ + i];
+                right_vect[z * proc_nX + i]
+                        = proc_vect[1][z * proc_realSizeZ + (proc_nY - 1) * proc_realSizeY + i];
+            }
+        }
+
+        int left_proc = (rankP / lineSizeP) * lineSizeP + (rankP - 1 + lineSizeP) % lineSizeP;
+        int right_proc = (rankP / lineSizeP) * lineSizeP + (rankP + 1 + lineSizeP) % lineSizeP;
+
+        MPI_Sendrecv(left_vect, send_vect_size, MPI_DOUBLE, left_proc, 0,
+                     left_vect, send_vect_size, MPI_DOUBLE, right_proc, 0, MPI_COMM_WORLD, &status);
+
+        MPI_Sendrecv(right_vect, send_vect_size, MPI_DOUBLE, right_proc, 0,
+                     right_vect, send_vect_size, MPI_DOUBLE, left_proc, 0, MPI_COMM_WORLD, &status);
+
+        for (int z = 0; z < proc_nZ; ++z) {
+            for (int i = 0; i < proc_nX; ++i) {
+                proc_vect[1][z * proc_realSizeZ + i] = left_vect[z * proc_nX + i];
+                proc_vect[1][z * proc_realSizeZ + (proc_nY - 1) * proc_realSizeY + i] = right_vect[z * proc_nX + i];
+            }
+        }
+
+        int top_proc = (rankP - lineSizeP + sizeP) % sizeP;
+        int bottom_proc = (rankP + lineSizeP) % sizeP;
+
+//        cout << "top_proc: " << top_proc << endl;
+//        cout << "bottom_proc: " << bottom_proc << endl;
+
+        // 1 and 2 iter - in one field in the memory
+        send_vect_size = proc_nY * proc_nX;
+        // top
+        MPI_Sendrecv(proc_vect[1], send_vect_size, MPI_DOUBLE, top_proc, 0,
+                     proc_vect[1], send_vect_size, MPI_DOUBLE, bottom_proc, 0, MPI_COMM_WORLD, &status);
+
+        // bottom
+        int offset = proc_vect_size - send_vect_size;
+        MPI_Sendrecv(proc_vect[1] + offset, send_vect_size, MPI_DOUBLE, bottom_proc, 0,
+                     proc_vect[1] + offset, send_vect_size, MPI_DOUBLE, top_proc, 0, MPI_COMM_WORLD, &status);
+
+
+        // BOUNDARIES!
+
+        prevTime = (prevTime + 1) % 2;
+        currTime = (currTime + 1) % 2;
+    }
+
+
+    endTime = MPI_Wtime();
+    printf("Run time %.15lf\n", endTime - startTime);
 //
 //
 //    // Output
