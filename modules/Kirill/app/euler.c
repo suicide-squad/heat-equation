@@ -129,13 +129,7 @@ int main(int argc, char **argv) {
   int dimChunk = NX*(NYr+2)*(NZr+2);
   int nonZero = dimChunk*7;
 
-//  coeffs[0] = 4;
-//  coeffs[1] = 1;
-//  coeffs[2] = 2;
-//  coeffs[3] = 3;
-
   initSpMat(&mat, nonZero, dimChunk);
-//  createExplicitSpMat(&mat, coeffs, dimChunk, NX, NX*(NYr+2));
   createExplicitSpMatV2(&mat, coeffs, NX, NYr + 2, NZr + 2);
 
   double *bufferRightYSend  = (double *)malloc(sizeof(double)*NX*(NZr+2));
@@ -161,7 +155,7 @@ int main(int argc, char **argv) {
 
   // ОСНОВНЫЕ ВЫЧИСЛЕНИЯ
 
-  for (int t = 1; t <= 1; t++) {
+  for (int t = 1; t <= sizeTime; t++) {
     //  ОБМЕН ГРАНИЦ ПО Y И Z
 
     //    Передача влево по Y
@@ -189,9 +183,6 @@ int main(int argc, char **argv) {
                  bufferDownZRecv, NX*(NYr+2), MPI_DOUBLE, rank_down, 3, gridComm, &stats[3]);
     unpack(bufferDownZRecv, u_chunk, NX, NYr+2, NZr+2, Z_DOWN_RECV);
 
-
-
-
     //  --------------------------------------
 
     multMV(&un_chunk, mat, u_chunk);
@@ -214,7 +205,7 @@ int main(int argc, char **argv) {
     double diffTime = t1 - t0;
     printf("Time -\t%.3lf\n", diffTime);
     writeFunction1D(pathResult1D, u, NX);
-    writeFunction3D(pathResult3D, u, dim, NX - 2);
+    writeFunction3D(pathResult3D, u, NX, NY, NZ);
 
     printf("DONE!!!\n");
     free(u);

@@ -18,18 +18,22 @@ const char pathResult3D[] = "../../../../result/Kirill/result_runge3D.txt";
 int main() {
   SpMatrix A, B, C;
   Setting setting;
-  double coeffs[5];
-  double* function;
+  double coeffs[4];
+  double* u;
   int error;
   error = readSetting(pathSetting, &setting);
 
   if (error != OK) return error;
 
-  size_t dim = (setting.NX + 2)*setting.NY*setting.NZ;
-  function = (double *)malloc(sizeof(double)*dim);
-  memset(function, 0, dim* sizeof(double));
+  int NX = (setting.NX + 2);
+  int NY = (setting.NY + 2);
+  int NZ = (setting.NZ + 2);
 
-  error = readFunction(pathFunction, &function, setting.NX, 0, 0);
+  size_t dim = NX*NY*NZ;
+  u = (double *)malloc(sizeof(double)*dim);
+  memset(u, 0, dim* sizeof(double));
+
+  error = readFunction(pathFunction, u, NX, NY, NZ);
 
   if (error != OK) return error;
 
@@ -50,32 +54,30 @@ int main() {
   coeffs[3] = setting.SIGMA/(hZ*hZ);
   coeffs[1] = - 2.0*setting.SIGMA*(coeffs[0] + coeffs[2] + coeffs[3]);
 
-  size_t NZ = dim*7;
-  int NX = (int)setting.NX + 2;
-  int NXY = (int)setting.NY*NX;
+  size_t nonZero = dim*7;
 
-  initSpMat(&A, NZ, dim);
-  createExplicitSpMat(&A, coeffs, (int)dim, NX, NXY);
+  initSpMat(&A, nonZero, dim);
+  createExplicitSpMatV2(&A, coeffs, NX, NY, NZ);
 
   coeffs[0] = setting.dt*coeffs[0]*0.5;
   coeffs[2] = setting.dt*coeffs[2]*0.5;
   coeffs[3] = setting.dt*coeffs[3]*0.5;
   coeffs[1] = 1.0 - 2.0*(coeffs[0] + coeffs[2] + coeffs[3]);
 
-  initSpMat(&B, NZ, dim);
-  createExplicitSpMat(&B, coeffs, (int)dim, NX, NXY);
+  initSpMat(&B, nonZero, dim);
+  createExplicitSpMatV2(&B, coeffs, NX, NY, NZ);
 
   coeffs[0] = coeffs[0]*2.0;
   coeffs[2] = coeffs[2]*2.0;
   coeffs[3] = coeffs[3]*2.0;
   coeffs[1] = 1.0 - 2.0*(coeffs[0] + coeffs[2] + coeffs[3]);
 
-  initSpMat(&C, NZ, dim);
-  createExplicitSpMat(&C, coeffs, (int)dim, NX, NXY);
+  initSpMat(&C, nonZero, dim);
+  createExplicitSpMatV2(&C, coeffs, NX, NY, NZ);
 
   //  printSpMat(A);
 
-  double *nextFunction = (double *)malloc(sizeof(double)*dim);
+  double *un = (double *)malloc(sizeof(double)*dim);
   double* k1 = (double*)malloc(sizeof(double)*dim);
   double* k2 = (double*)malloc(sizeof(double)*dim);
   double* k3 = (double*)malloc(sizeof(double)*dim);
@@ -88,8 +90,10 @@ int main() {
   // ОСНОВНЫЕ ВЫЧИСЛЕНИЯ
 
   for (int t = 1; t <= 1; t++) {
+//    ОБНОВИТЬ ПЕРЕДАЧУ ГРАНИЦ!!!
+
     // k1 = A*U
-    multMV(&k1, A, function);
+    multMV(&k1, A, u);
 
     // k2 = B*k1
     multMV(&k2, B, k1);
@@ -101,11 +105,11 @@ int main() {
     multMV(&k4, C, k3);
 
     // UNext = U + (k1 + k2*2 + k3*2 + k4)*h;
-    sumV(&nextFunction, function, k1, k2, k3, k4, dim, h);
+    sumV(&un, u, k1, k2, k3, k4, dim, h);
 
-    tmp = function;
-    function = nextFunction;
-    nextFunction = tmp;
+    tmp = u;
+    u = un;
+    un = tmp;
   }
 
   //  *******************
@@ -113,13 +117,13 @@ int main() {
   double t1 = omp_get_wtime();
   double diffTime = t1 - t0;
   printf("Time -\t%.3lf\n", diffTime);
-  writeFunction1D(pathResult, function, setting.NX);
-  writeFunction3D(pathResult3D, function, dim, setting.NX);
+  writeFunction1D(pathResult, u, NX);
+  writeFunction3D(pathResult3D, u, NX, NY, NZ);
 
   freeSpMat(&A);
 
-  free(function);
-  free(nextFunction);
+  free(u);
+  free(un);
   free(k1);
   free(k2);
   free(k3);

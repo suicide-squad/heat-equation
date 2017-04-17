@@ -37,7 +37,8 @@ int readFunction(const char *path, double *u, int nx, int ny, int nz) {
   for (int z = 1; z < nz-1; z++)
     for (int y = 1; y < ny-1; y++)
       for (int x = 1; x < nx-1; x++)
-        if (!fscanf(fp, "%lf\n", &u[x + y * nx + z * nx * ny])) return READING_ERROR;
+        if (!fscanf(fp, "%lf\n", &u[x + y * nx + z * nx * ny]))
+          return READING_ERROR;
 
   return OK;
 }
@@ -51,13 +52,14 @@ void writeFunction1D(const char *path, double *function, size_t NX) {
 
   fclose(fp);
 }
-void writeFunction3D(const char *path, double *function, size_t dim, size_t NX) {
+
+void writeFunction3D(const char *path, double *u, int nx, int ny, int nz) {
   FILE *fp;
   fp = fopen(path, "w");
 
-  for (int i = 0; i < dim; i++)
-    if (i%(NX + 2)!=0 && i%(NX + 2) != NX + 1 )
-      fprintf(fp, "%.15le\n", function[i]);
-
+  for (int z = 1; z < nz-1; z++)
+    for (int y = 1; y < ny-1; y++)
+      for (int x = 1; x < nx-1; x++)
+        fprintf(fp, "%.15le\n", u[x + y*nx + z*nx*ny]);
   fclose(fp);
 }
