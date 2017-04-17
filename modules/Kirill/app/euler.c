@@ -34,6 +34,7 @@ int main(int argc, char **argv) {
 
   MPI_Comm_size(MPI_COMM_WORLD, &sizeP);
   MPI_Comm_rank(MPI_COMM_WORLD, &rankP);
+  if (rankP == ROOT) printf("Запуск на %d процессах\n", sizeP);
 
   SpMatrix mat;
   size_t dim;
@@ -49,11 +50,11 @@ int main(int argc, char **argv) {
 
     if (error != OK) return error;
 
-    dim = (setting.NX + 2) * setting.NY * setting.NZ;
+    dim = (setting.NX + 2) * (setting.NY+2) * (setting.NZ+2);
     u = (double *) malloc(sizeof(double) * dim);
     memset(u, 0, dim * sizeof(double));
 
-    error = readFunction(pathFunction, &u, dim, setting.NX);
+    error = readFunction(pathFunction, u, setting.NX+2, setting.NY+2, setting.NZ+2);
 
     if (error != OK) return error;
 
@@ -65,18 +66,18 @@ int main(int argc, char **argv) {
 
     printf("TimeSize -\t%lu\n", sizeTime);
 
-    double hX = fabs(setting.XSTART - setting.XEND) / setting.NX;
-    double hY = fabs(setting.YSTART - setting.YEND) / setting.NY;
-    double hZ = fabs(setting.ZSTART - setting.ZEND) / setting.NZ;
+    double dx = fabs(setting.XSTART - setting.XEND) / setting.NX;
+    double dy = fabs(setting.YSTART - setting.YEND) / setting.NY;
+    double dz = fabs(setting.ZSTART - setting.ZEND) / setting.NZ;
 
-    coeffs[0] = setting.dt * setting.SIGMA / (hX * hX);
-    coeffs[1] = 1.0 - 2.0 * setting.dt * setting.SIGMA * (1.0 / (hX * hX) + 1.0 / (hY * hY) + 1.0 / (hZ * hZ));
-    coeffs[2] = setting.dt * setting.SIGMA / (hY * hY);
-    coeffs[3] = setting.dt * setting.SIGMA / (hZ * hZ);
+    coeffs[0] = 1.0 - 2.0 * setting.dt * setting.SIGMA * (1.0 / (dx * dx) + 1.0 / (dy * dy) + 1.0 / (dz * dz));
+    coeffs[1] = setting.dt * setting.SIGMA / (dx * dx);
+    coeffs[2] = setting.dt * setting.SIGMA / (dy * dy);
+    coeffs[3] = setting.dt * setting.SIGMA / (dz * dz);
 
     NX = setting.NX + 2;
-    NY = setting.NY;
-    NZ = setting.NZ;
+    NY = setting.NY + 2;
+    NZ = setting.NZ + 2;
   }
 
   MPI_Bcast(&sizeTime, 1, MPI_UNSIGNED_LONG, ROOT, MPI_COMM_WORLD);
@@ -95,8 +96,8 @@ int main(int argc, char **argv) {
     blockYP = 1;
     blockZP = 1;
   }
-  NYr = NY / blockYP;
-  NZr = NZ / blockZP;
+  NYr = (NY-2) / blockYP;
+  NZr = (NZ-2) / blockZP;
 
 //  СОЗДАНИЕ ДЕКАРДОВОЙ ТОПОЛОГИИ
   const int DIM_CART = 2;
@@ -125,11 +126,17 @@ int main(int argc, char **argv) {
   //  SCATTER
   scatter_by_block(u, u_chunk, NX, NY, NYr, NZr, gridComm);
 
-  int dim_chunk = NX*(NYr+2)*(NZr+2);
-  int nonZero = dim_chunk*7;
+  int dimChunk = NX*(NYr+2)*(NZr+2);
+  int nonZero = dimChunk*7;
 
-  initSpMat(&mat, nonZero, dim_chunk);
-  createExplicitSpMat(&mat, coeffs, dim_chunk, NX, NX*(NYr+2));
+//  coeffs[0] = 4;
+//  coeffs[1] = 1;
+//  coeffs[2] = 2;
+//  coeffs[3] = 3;
+
+  initSpMat(&mat, nonZero, dimChunk);
+//  createExplicitSpMat(&mat, coeffs, dimChunk, NX, NX*(NYr+2));
+  createExplicitSpMatV2(&mat, coeffs, NX, NYr + 2, NZr + 2);
 
   double *bufferRightYSend  = (double *)malloc(sizeof(double)*NX*(NZr+2));
   double *bufferRightYRecv  = (double *)malloc(sizeof(double)*NX*(NZr+2));
@@ -158,30 +165,31 @@ int main(int argc, char **argv) {
     //  ОБМЕН ГРАНИЦ ПО Y И Z
 
     //    Передача влево по Y
-//    pack(bufferLeftYSend, u_chunk, NX, NYr+2, NZr+2, Y_LEFT_SEND);
-//    MPI_Sendrecv(bufferLeftYSend,  NX*(NZr+2), MPI_DOUBLE, rank_left, 0,
-//                 bufferRightYRecv, NX*(NZr+2), MPI_DOUBLE, rank_right, 0, gridComm, &stats[0]);
-//    unpack(bufferRightYRecv, u_chunk, NX, NYr+2, NZr+2, Y_RIGHT_RECV);
-//    //printf("rank %d, error %d, tag %d, source %d\n",cartrank, stats[0].MPI_ERROR, stats[0].MPI_TAG, stats[0].MPI_SOURCE);
-//
-//    //    Передача вправо по Y
-//    pack(bufferRightYSend, u_chunk, NX, NYr+2, NZr+2, Y_RIGHT_SEND);
-//    MPI_Sendrecv(bufferRightYSend, NX*(NZr+2), MPI_DOUBLE, rank_right, 1,
-//                 bufferLeftYRecv,  NX*(NZr+2), MPI_DOUBLE, rank_left, 1, gridComm, &stats[1]);
-//    unpack(bufferLeftYRecv, u_chunk, NX, NYr+2, NZr+2, Y_LEFT_RECV);
-//
-//
-//    //    Передача вверх по Z
-//    pack(bufferTopZSend, u_chunk, NX, NYr+2, NZr+2, Z_TOP_SEND);
-//    MPI_Sendrecv(bufferTopZSend,  NX*(NYr+2), MPI_DOUBLE, rank_top, 3,
-//                 bufferDownZRecv, NX*(NYr+2), MPI_DOUBLE, rank_down, 3, gridComm, &stats[3]);
-//    unpack(bufferDownZRecv, u_chunk, NX, NYr+2, NZr+2, Z_DOWN_RECV);
-//
-//    //    Передача вниз по Z
-//    pack(bufferDownZSend, u_chunk, NX, NYr+2, NZr+2, Z_DOWN_SEND);
-//    MPI_Sendrecv(bufferDownZSend, NX*(NYr+2), MPI_DOUBLE, rank_down, 2,
-//                 bufferTopZRecv,  NX*(NYr+2), MPI_DOUBLE, rank_top, 2, gridComm, &stats[2]);
-//    unpack(bufferTopZRecv, u_chunk, NX, NYr+2, NZr+2, Z_TOP_RECV);
+    pack(bufferLeftYSend, u_chunk, NX, NYr+2, NZr+2, Y_LEFT_SEND);
+    MPI_Sendrecv(bufferLeftYSend,  NX*(NZr+2), MPI_DOUBLE, rank_left, 0,
+                 bufferRightYRecv, NX*(NZr+2), MPI_DOUBLE, rank_right, 0, gridComm, &stats[0]);
+    unpack(bufferRightYRecv, u_chunk, NX, NYr+2, NZr+2, Y_RIGHT_RECV);
+    //printf("rank %d, error %d, tag %d, source %d\n",cartrank, stats[0].MPI_ERROR, stats[0].MPI_TAG, stats[0].MPI_SOURCE);
+
+    //    Передача вправо по Y
+    pack(bufferRightYSend, u_chunk, NX, NYr+2, NZr+2, Y_RIGHT_SEND);
+    MPI_Sendrecv(bufferRightYSend, NX*(NZr+2), MPI_DOUBLE, rank_right, 1,
+                 bufferLeftYRecv,  NX*(NZr+2), MPI_DOUBLE, rank_left, 1, gridComm, &stats[1]);
+    unpack(bufferLeftYRecv, u_chunk, NX, NYr+2, NZr+2, Y_LEFT_RECV);
+
+    //    Передача вниз по Z
+    pack(bufferDownZSend, u_chunk, NX, NYr+2, NZr+2, Z_DOWN_SEND);
+    MPI_Sendrecv(bufferDownZSend, NX*(NYr+2), MPI_DOUBLE, rank_down, 2,
+                 bufferTopZRecv,  NX*(NYr+2), MPI_DOUBLE, rank_top, 2, gridComm, &stats[2]);
+    unpack(bufferTopZRecv, u_chunk, NX, NYr+2, NZr+2, Z_TOP_RECV);
+
+    //    Передача вверх по Z
+    pack(bufferTopZSend, u_chunk, NX, NYr+2, NZr+2, Z_TOP_SEND);
+    MPI_Sendrecv(bufferTopZSend,  NX*(NYr+2), MPI_DOUBLE, rank_top, 3,
+                 bufferDownZRecv, NX*(NYr+2), MPI_DOUBLE, rank_down, 3, gridComm, &stats[3]);
+    unpack(bufferDownZRecv, u_chunk, NX, NYr+2, NZr+2, Z_DOWN_RECV);
+
+
 
 
     //  --------------------------------------
@@ -200,12 +208,12 @@ int main(int argc, char **argv) {
   }
 
   //        GATHER
-  //gather_by_block(u, u_chunk, NX, NY, NYr, NZr, gridComm);
+  gather_by_block(u, u_chunk, NX, NY, NYr, NZr, gridComm);
 
   if (rankP == ROOT) {
     double diffTime = t1 - t0;
     printf("Time -\t%.3lf\n", diffTime);
-    writeFunction1D(pathResult1D, un_chunk, NX - 2);
+    writeFunction1D(pathResult1D, u, NX);
     writeFunction3D(pathResult3D, u, dim, NX - 2);
 
     printf("DONE!!!\n");

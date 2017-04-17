@@ -51,6 +51,9 @@ void denseMult(TYPE **result, TYPE **mat, TYPE *vec, size_t dim);
 // Создание матрицы для явных схем
 void createExplicitSpMat(SpMatrix *mat, TYPE coeffs[4], int dim, int NX, int NXY);
 
+void createExplicitSpMatV2(SpMatrix *mat, TYPE coeffs[4], int nx, int ny, int nz);
+
+
 // Создание матрицы для неявных схем
 void createImplicitSpMat(SpMatrix *mat, TYPE coeffs[3], int dim, int NX, int NXY);
 

@@ -80,16 +80,17 @@ void scatter_by_block(double *u, double *u_chunk, int NX, int NY, int NYr, int N
   MPI_Cart_sub(gridComm, remain_dims, &colComm);
 
   double *u_z = NULL;
+
   if (gridCoords[1] == 0) {
     u_z = (double *)malloc(sizeof(double)*NX*NY*(NZr+2));
-    MPI_Scatter(u, NX*NY*(NZr), MPI_DOUBLE, u_z + NX*NY, NX*NY*(NZr), MPI_DOUBLE, 0, colComm);
+    MPI_Scatter(u + NY*NX, NX*NY*(NZr), MPI_DOUBLE, u_z + NX*NY, NX*NY*(NZr), MPI_DOUBLE, 0, colComm);
   }
 
   remain_dims[0] = 0; remain_dims[1] = 1;
   MPI_Cart_sub(gridComm, remain_dims, &rowComm);
 
   for (int i = 1; i < NZr + 1; i++)
-    MPI_Scatter(u_z + i*NX*NY, NX*(NYr), MPI_DOUBLE, u_chunk + NX + i*NX*(NYr), NX*NYr, MPI_DOUBLE, 0, rowComm);
+    MPI_Scatter(u_z + NX + i*NX*NY, NX*(NYr), MPI_DOUBLE, u_chunk + NX + i*NX*(NYr+2), NX*NYr, MPI_DOUBLE, 0, rowComm);
 
   if (gridCoords[1] == 0) free(u_z);
 }
@@ -110,17 +111,13 @@ void gather_by_block(double *u, double *u_chunk, int NX, int NY, int NYr, int NZ
   MPI_Cart_sub(gridComm, remain_dims, &rowComm);
 
   double *u_z = NULL;
-  if (gridCoords[1] == 0) u_z = (double *) malloc(sizeof(double) * NX * NY *NZr);
+  if (gridCoords[1] == 0) u_z = (double *) malloc(sizeof(double) * NX * NY *(NZr));
 
-  for (int i = 0; i < NZr; i++)
-    MPI_Gather(u_chunk + NX + (i+1)*(NYr)*NX, NX*(NYr), MPI_DOUBLE, u_z + i*NX*NY, NX*(NYr), MPI_DOUBLE, 0, rowComm);
+  for (int z = 0; z < NZr; z++)
+    MPI_Gather(u_chunk + NX + (z+1)*NX*(NYr+2), NX*(NYr), MPI_DOUBLE, u_z + NX + z*NX*NY, NX*(NYr), MPI_DOUBLE, 0, rowComm);
 
   if (gridCoords[1] == 0) {
-    MPI_Gather(u_z, NX * NY * (NZr), MPI_DOUBLE,
-               u, NX * NY * (NZr), MPI_DOUBLE, 0,
-               colComm);
+    MPI_Gather(u_z, NX*NY*(NZr), MPI_DOUBLE, u + NY*NX, NX*NY*(NZr), MPI_DOUBLE, 0, colComm);
     free(u_z);
   }
-  int rank;
-  MPI_Comm_rank(gridComm, &rank);
 }
