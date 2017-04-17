@@ -31,9 +31,12 @@ def main():
         res1 = np.loadtxt(pathRes1)
         res2 = np.loadtxt(pathRes2)
 
+        assert len(res1) == len(res2)
+
         yAbs = [xi-xj for xi, xj in zip(res1, res2)]
         yRelat = [(xi-xj)/max(xi, xj) for xi, xj in zip(res1, res2)]
 
+        np.savetxt('test.txt',yAbs, fmt='%.15e')
         absoluteFault = max(map(abs,yAbs))
         relativeFault = max(map(abs,yRelat))
         print("абсолютная:\t%.15f" % absoluteFault)
@@ -77,7 +80,7 @@ def main():
 
         plt.show()
     except AssertionError:
-        print ('ERROR! Не совпадают размерности!')
+        print ('ERROR! Не совпадают размерности! ' + str(len(res1)) + "!=" + str(len(res2)))
 
 
 if __name__ == '__main__':

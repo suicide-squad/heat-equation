@@ -70,7 +70,7 @@ void denseMult(double **result, double **mat, double *vec, size_t dim) {
   }
 }
 
-void createExplicitSpMat(SpMatrix *mat, TYPE coeffs[5], int dim, int NX, int NXY) {
+void createExplicitSpMat(SpMatrix *mat, TYPE coeffs[4], int dim, int NX, int NXY) {
   int index = 0, j, k, shiftIndex;
   mat->rowIndex[0] = 0;
   for (int i = 0; i < dim; i++) {
@@ -81,15 +81,15 @@ void createExplicitSpMat(SpMatrix *mat, TYPE coeffs[5], int dim, int NX, int NXY
     else
       shiftIndex = 0;
 
+    mat->col[index] = i + shiftIndex;
+    mat->value[index] = coeffs[1];
+    index++;
+
     // ***************************************
     //      Смещение на x - 1
     // ***************************************
     mat->col[index] = i + shiftIndex - 1;
     mat->value[index] = coeffs[0];
-    index++;
-
-    mat->col[index] = i + shiftIndex;
-    mat->value[index] = coeffs[1];
     index++;
 
     // ***************************************
@@ -103,7 +103,8 @@ void createExplicitSpMat(SpMatrix *mat, TYPE coeffs[5], int dim, int NX, int NXY
     // ***************************************
     j = (i + shiftIndex) % NXY - NX;
     if (j < 0) {
-      mat->col[index] = dim + j;
+//      mat->col[index] = DIM + j;
+      mat->col[index] = NXY + j;
       mat->value[index] = coeffs[2];
 
       index++;
@@ -117,7 +118,8 @@ void createExplicitSpMat(SpMatrix *mat, TYPE coeffs[5], int dim, int NX, int NXY
     //      Смещение на y + 1
     // ***************************************
     mat->col[index] = ((i + shiftIndex) / NXY) * NXY + (i + shiftIndex + NX) % NXY;
-//      mat->col[index] = (i + NX) % NXY;
+    //mat->col[index] = (i + shiftIndex + NX) % NXY;
+    //mat->col[index] = (i + NX) % NXY;
     mat->value[index] = coeffs[2];
 
     index++;

@@ -13,6 +13,7 @@
 const char pathSetting[] = "../../../../initial/setting.ini";
 const char pathFunction[] = "../../../../initial/function.txt";
 const char pathResult[] = "../../../../result/Kirill/runge3D.txt";
+const char pathResult3D[] = "../../../../result/Kirill/result_runge3D.txt";
 
 int main() {
   SpMatrix A, B, C;
@@ -86,7 +87,7 @@ int main() {
 
   // ОСНОВНЫЕ ВЫЧИСЛЕНИЯ
 
-  for (int t = 1; t <= sizeTime; t++) {
+  for (int t = 1; t <= 1; t++) {
     // k1 = A*U
     multMV(&k1, A, function);
 
@@ -113,6 +114,7 @@ int main() {
   double diffTime = t1 - t0;
   printf("Time -\t%.3lf\n", diffTime);
   writeFunction1D(pathResult, function, setting.NX);
+  writeFunction3D(pathResult3D, function, dim, setting.NX);
 
   freeSpMat(&A);
 

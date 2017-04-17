@@ -8,8 +8,8 @@ import os
 def buildPlot3D(ax, title, u, usmin, usmax, x, y, z, xmax, xmin, ymax, ymin, zmax, zmin):
     norm = colors.Normalize(vmin=usmin, vmax=usmax, clip=True)
     alpha = 0.8
-    rstride = 2
-    cstride = 2
+    rstride = 10
+    cstride = 10
     linewidth = 0.5
     antialiased = True
     shade = False

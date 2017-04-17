@@ -35,14 +35,12 @@ int main(int argc, char **argv) {
   MPI_Comm_size(MPI_COMM_WORLD, &sizeP);
   MPI_Comm_rank(MPI_COMM_WORLD, &rankP);
 
-
   SpMatrix mat;
   size_t dim;
   double coeffs[4];
   double* u = NULL, *u_chunk = NULL, *un_chunk;
 
   size_t NX, NY, NZ, NYr, NZr;
-
 
   if (rankP == ROOT) {
     int error;
@@ -102,7 +100,7 @@ int main(int argc, char **argv) {
 
 //  СОЗДАНИЕ ДЕКАРДОВОЙ ТОПОЛОГИИ
   const int DIM_CART = 2;
-  MPI_Comm gridComm;  	// Коммуникатор в виде квадратной решетки
+  MPI_Comm gridComm;
 
   //  размер каждой размерности
   int dims[DIM_CART];   int periods[DIM_CART];
@@ -127,13 +125,7 @@ int main(int argc, char **argv) {
   //  SCATTER
   scatter_by_block(u, u_chunk, NX, NY, NYr, NZr, gridComm);
 
-//  TODO:
-//  При кубиках на границах достаточно выделять на + 1 (соседей с одной стороны нет)
-//  Если ранковый кубик не на границе, то нужно выделять по 2 соседа
-// ЛОЖЬ!
-//  Всегда нужно знать соседей, при границах зацикливание!!!
   int dim_chunk = NX*(NYr+2)*(NZr+2);
-
   int nonZero = dim_chunk*7;
 
   initSpMat(&mat, nonZero, dim_chunk);
@@ -149,7 +141,11 @@ int main(int argc, char **argv) {
   double *bufferTopZSend    = (double *)malloc(sizeof(double)*NX*(NYr+2));
   double *bufferTopZRecv    = (double *)malloc(sizeof(double)*NX*(NYr+2));
 
-  int rank_recv, rank_send;
+  int rank_left, rank_right, rank_down, rank_top;
+  MPI_Cart_shift(gridComm, 1, 1, &rank_left, &rank_right);
+  MPI_Cart_shift(gridComm, 0, 1, &rank_down, &rank_top);
+
+  //printf("rank - %d; left %d; right %d; top %d; down %d\n", rankP, rank_left, rank_right, rank_top, rank_down);
 
   if (rankP == ROOT) {
     printf("START!\n\n");
@@ -162,32 +158,31 @@ int main(int argc, char **argv) {
     //  ОБМЕН ГРАНИЦ ПО Y И Z
 
     //    Передача влево по Y
-    MPI_Cart_shift(gridComm, 1, -1, &rank_recv, &rank_send);
-    pack(bufferLeftYSend, u_chunk, NX, NYr+2, NZr+2, Y_LEFT_SEND);
-    MPI_Sendrecv(bufferLeftYSend,  NX*(NZr+2), MPI_DOUBLE, rank_send, 0,
-                 bufferRightYRecv, NX*(NZr+2), MPI_DOUBLE, rank_recv, 0, gridComm, &stats[0]);
-    unpack(bufferRightYRecv, u_chunk, NX, NYr+2, NZr+2, Y_RIGHT_RECV);
+//    pack(bufferLeftYSend, u_chunk, NX, NYr+2, NZr+2, Y_LEFT_SEND);
+//    MPI_Sendrecv(bufferLeftYSend,  NX*(NZr+2), MPI_DOUBLE, rank_left, 0,
+//                 bufferRightYRecv, NX*(NZr+2), MPI_DOUBLE, rank_right, 0, gridComm, &stats[0]);
+//   // unpack(bufferRightYRecv, u_chunk, NX, NYr+2, NZr+2, Y_RIGHT_RECV);
+//    //printf("rank %d, error %d, tag %d, source %d\n",cartrank, stats[0].MPI_ERROR, stats[0].MPI_TAG, stats[0].MPI_SOURCE);
+//
+//    //    Передача вправо по Y
+//    pack(bufferRightYSend, u_chunk, NX, NYr+2, NZr+2, Y_RIGHT_SEND);
+//    MPI_Sendrecv(bufferRightYSend, NX*(NZr+2), MPI_DOUBLE, rank_right, 1,
+//                 bufferLeftYRecv,  NX*(NZr+2), MPI_DOUBLE, rank_left, 1, gridComm, &stats[1]);
+//    //unpack(bufferLeftYRecv, u_chunk, NX, NYr+2, NZr+2, Y_LEFT_RECV);
+//
+//
+//    //    Передача вниз по Z
+//    pack(bufferDownZSend, u_chunk, NX, NYr+2, NZr+2, Z_DOWN_SEND);
+//    MPI_Sendrecv(bufferDownZSend, NX*(NYr+2), MPI_DOUBLE, rank_down, 2,
+//                 bufferTopZRecv,  NX*(NYr+2), MPI_DOUBLE, rank_top, 2, gridComm, &stats[2]);
+//    //unpack(bufferTopZRecv, u_chunk, NX, NYr+2, NZr+2, Z_TOP_RECV);
+//
+//    //    Передача вверх по Z
+//    pack(bufferTopZSend, u_chunk, NX, NYr+2, NZr+2, Z_TOP_SEND);
+//    MPI_Sendrecv(bufferTopZSend,  NX*(NYr+2), MPI_DOUBLE, rank_top, 3,
+//                 bufferDownZRecv, NX*(NYr+2), MPI_DOUBLE, rank_down, 3, gridComm, &stats[3]);
+    //unpack(bufferDownZRecv, u_chunk, NX, NYr+2, NZr+2, Z_DOWN_RECV);
 
-    //    Передача вправо по Y
-    MPI_Cart_shift(gridComm, 1, 1, &rank_recv, &rank_send);
-    pack(bufferRightYSend, u_chunk, NX, NYr+2, NZr+2, Y_RIGHT_SEND);
-    MPI_Sendrecv(bufferRightYSend, NX*(NZr+2), MPI_DOUBLE, rank_send, 1,
-                 bufferLeftYRecv,  NX*(NZr+2), MPI_DOUBLE, rank_recv, 1, gridComm, &stats[1]);
-    unpack(bufferLeftYRecv, u_chunk, NX, NYr+2, NZr+2, Y_LEFT_RECV);
-
-    //    Передача вниз по Z
-    MPI_Cart_shift(gridComm, 0, -1, &rank_recv, &rank_send);
-    pack(bufferDownZSend, u_chunk, NX, NYr+2, NZr+2, Z_DOWN_SEND);
-    MPI_Sendrecv(bufferDownZSend, NX*(NYr+2), MPI_DOUBLE, rank_send, 2,
-                 bufferTopZRecv,  NX*(NYr+2), MPI_DOUBLE, rank_recv, 2, gridComm, &stats[2]);
-    unpack(bufferTopZRecv, u_chunk, NX, NYr+2, NZr+2, Z_TOP_RECV);
-
-    //    Передача вверх по Z
-    MPI_Cart_shift(gridComm, 0, 1, &rank_recv, &rank_send);
-    pack(bufferTopZSend, u_chunk, NX, NYr+2, NZr+2, Z_TOP_SEND);
-    MPI_Sendrecv(bufferTopZSend,  NX*(NYr+2), MPI_DOUBLE, rank_send, 3,
-                 bufferDownZRecv, NX*(NYr+2), MPI_DOUBLE, rank_recv, 3, gridComm, &stats[3]);
-    unpack(bufferDownZRecv, u_chunk, NX, NYr+2, NZr+2, Z_DOWN_RECV);
 
     //  --------------------------------------
 
