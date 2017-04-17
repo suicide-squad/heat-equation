@@ -17,8 +17,8 @@
 
 const char pathSetting[] = "../../../../initial/setting.ini";
 const char pathFunction[] = "../../../../initial/function.txt";
-const char pathResult1D[] = "../../../../result/Kirill/euler3D_MPI.txt";
-const char pathResult3D[] = "../../../../result/Kirill/result_MPI.txt";
+const char pathResult1D[] = "../../../../result/Kirill/euler1D_MPI.txt";
+const char pathResult3D[] = "../../../../result/Kirill/euler3D_MPI.txt";
 
 
 int main(int argc, char **argv) {
@@ -163,7 +163,6 @@ int main(int argc, char **argv) {
     MPI_Sendrecv(bufferLeftYSend,  NX*(NZr+2), MPI_DOUBLE, rank_left, 0,
                  bufferRightYRecv, NX*(NZr+2), MPI_DOUBLE, rank_right, 0, gridComm, &stats[0]);
     unpack(bufferRightYRecv, u_chunk, NX, NYr+2, NZr+2, Y_RIGHT_RECV);
-    //printf("rank %d, error %d, tag %d, source %d\n",cartrank, stats[0].MPI_ERROR, stats[0].MPI_TAG, stats[0].MPI_SOURCE);
 
     //    Передача вправо по Y
     pack(bufferRightYSend, u_chunk, NX, NYr+2, NZr+2, Y_RIGHT_SEND);
