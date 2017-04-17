@@ -250,13 +250,16 @@ int main(int argc, char** argv) {
 
 
         // Output
-        FILE *outfile = fopen("../../result/Sergey/Sergey_Euler_MPI.txt", "w");
+        FILE *outfile = fopen("../../result/Sergey/Sergey_Euler_MPI_full.txt", "w");
 
-        double outData;
-        for (int i = 1; i <= task.nX; ++i) {
-            fprintf(outfile, "%2.15le\n", getVectorValue(vect, i, 0, 0, task));
-
+        for (int i = 0; i < task.fullVectSize; ++i) {
+            if ( i % (task.nX + 2) != 0 && i % (task.nX + 2) != task.nX + 1)
+                fprintf(outfile, "%2.15le\n", vect[i]);
         }
+//        for (int i = 1; i <= task.nX; ++i) {
+//            fprintf(outfile, "%2.15le\n", getVectorValue(vect, i, 0, 0, task));
+//
+//        }
     }
     MPI_Finalize();
 }
