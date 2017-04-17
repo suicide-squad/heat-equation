@@ -161,27 +161,27 @@ int main(int argc, char **argv) {
 //    pack(bufferLeftYSend, u_chunk, NX, NYr+2, NZr+2, Y_LEFT_SEND);
 //    MPI_Sendrecv(bufferLeftYSend,  NX*(NZr+2), MPI_DOUBLE, rank_left, 0,
 //                 bufferRightYRecv, NX*(NZr+2), MPI_DOUBLE, rank_right, 0, gridComm, &stats[0]);
-//   // unpack(bufferRightYRecv, u_chunk, NX, NYr+2, NZr+2, Y_RIGHT_RECV);
+//    unpack(bufferRightYRecv, u_chunk, NX, NYr+2, NZr+2, Y_RIGHT_RECV);
 //    //printf("rank %d, error %d, tag %d, source %d\n",cartrank, stats[0].MPI_ERROR, stats[0].MPI_TAG, stats[0].MPI_SOURCE);
 //
 //    //    Передача вправо по Y
 //    pack(bufferRightYSend, u_chunk, NX, NYr+2, NZr+2, Y_RIGHT_SEND);
 //    MPI_Sendrecv(bufferRightYSend, NX*(NZr+2), MPI_DOUBLE, rank_right, 1,
 //                 bufferLeftYRecv,  NX*(NZr+2), MPI_DOUBLE, rank_left, 1, gridComm, &stats[1]);
-//    //unpack(bufferLeftYRecv, u_chunk, NX, NYr+2, NZr+2, Y_LEFT_RECV);
+//    unpack(bufferLeftYRecv, u_chunk, NX, NYr+2, NZr+2, Y_LEFT_RECV);
 //
-//
-//    //    Передача вниз по Z
-//    pack(bufferDownZSend, u_chunk, NX, NYr+2, NZr+2, Z_DOWN_SEND);
-//    MPI_Sendrecv(bufferDownZSend, NX*(NYr+2), MPI_DOUBLE, rank_down, 2,
-//                 bufferTopZRecv,  NX*(NYr+2), MPI_DOUBLE, rank_top, 2, gridComm, &stats[2]);
-//    //unpack(bufferTopZRecv, u_chunk, NX, NYr+2, NZr+2, Z_TOP_RECV);
 //
 //    //    Передача вверх по Z
 //    pack(bufferTopZSend, u_chunk, NX, NYr+2, NZr+2, Z_TOP_SEND);
 //    MPI_Sendrecv(bufferTopZSend,  NX*(NYr+2), MPI_DOUBLE, rank_top, 3,
 //                 bufferDownZRecv, NX*(NYr+2), MPI_DOUBLE, rank_down, 3, gridComm, &stats[3]);
-    //unpack(bufferDownZRecv, u_chunk, NX, NYr+2, NZr+2, Z_DOWN_RECV);
+//    unpack(bufferDownZRecv, u_chunk, NX, NYr+2, NZr+2, Z_DOWN_RECV);
+//
+//    //    Передача вниз по Z
+//    pack(bufferDownZSend, u_chunk, NX, NYr+2, NZr+2, Z_DOWN_SEND);
+//    MPI_Sendrecv(bufferDownZSend, NX*(NYr+2), MPI_DOUBLE, rank_down, 2,
+//                 bufferTopZRecv,  NX*(NYr+2), MPI_DOUBLE, rank_top, 2, gridComm, &stats[2]);
+//    unpack(bufferTopZRecv, u_chunk, NX, NYr+2, NZr+2, Z_TOP_RECV);
 
 
     //  --------------------------------------
@@ -200,12 +200,12 @@ int main(int argc, char **argv) {
   }
 
   //        GATHER
-  gather_by_block(u, u_chunk, NX, NY, NYr, NZr, gridComm);
+  //gather_by_block(u, u_chunk, NX, NY, NYr, NZr, gridComm);
 
   if (rankP == ROOT) {
     double diffTime = t1 - t0;
     printf("Time -\t%.3lf\n", diffTime);
-    writeFunction1D(pathResult1D, u, NX - 2);
+    writeFunction1D(pathResult1D, un_chunk, NX - 2);
     writeFunction3D(pathResult3D, u, dim, NX - 2);
 
     printf("DONE!!!\n");

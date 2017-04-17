@@ -47,7 +47,7 @@ void writeFunction1D(const char *path, double *function, size_t NX) {
   fp = fopen(path, "w");
 
   for (int i = 1; i < NX + 1; i++)
-    fprintf(fp, "%.15le\n", function[i]);
+    fprintf(fp, "%.15le\n", function[i + (NX+2)*1 +(NX+2)*18*1]);
 
   fclose(fp);
 }
