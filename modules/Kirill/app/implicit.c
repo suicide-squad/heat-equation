@@ -38,7 +38,7 @@ int main() {
   function = (double *) malloc(sizeof(double) * dim);
   memset(function, 0, dim * sizeof(double));
 
-  error = readFunction(pathFunction, &function, dim, setting.NX);
+  error = readFunction(pathFunction, &function, setting.NX, 0, 0);
 
   if (error != OK) return error;
 
@@ -113,7 +113,7 @@ int main() {
   double t1 = omp_get_wtime();
   double diffTime = t1 - t0;
   printf("Time -\t%.3lf\n", diffTime);
-  writeFunctionX(pathResult, function, setting.NX);
+  writeFunction1D(pathResult, function, setting.NX);
 
   freeSpMat(&mat);
   free(function);
