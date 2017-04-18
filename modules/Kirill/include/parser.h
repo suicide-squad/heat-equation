@@ -17,9 +17,9 @@ typedef struct {
   double ZSTART;
   double ZEND;
   double SIGMA;
-  size_t NX;
-  size_t NY;
-  size_t NZ;
+  int NX;
+  int NY;
+  int NZ;
   double TSTART;
   double TFINISH;
   double dt;
@@ -28,7 +28,7 @@ typedef struct {
 
 int readSetting(const char *path, Setting *setting);
 int readFunction(const char *path, double *u, int nx, int ny, int nz);
-void writeFunction1D(const char *path, double *function, size_t NX);
+void writeFunction1D(const char *path, double *u, int nx, int ny, int y, int z);
 void writeFunction3D(const char *path, double *u, int nx, int ny, int nz);
 
 #endif //HEAT_EQUATION_PARSER_H

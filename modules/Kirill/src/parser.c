@@ -19,9 +19,9 @@ int readSetting(const char *path, Setting *setting) {
   if ( !fscanf(fp, "ZSTART=%lf\n", &setting->ZSTART) ) return READING_ERROR;
   if ( !fscanf(fp, "ZEND=%lf\n", &setting->ZEND) ) return READING_ERROR;
   if ( !fscanf(fp, "SIGMA=%lf\n", &setting->SIGMA) ) return READING_ERROR;
-  if ( !fscanf(fp, "NX=%lu\n", &setting->NX) ) return READING_ERROR;
-  if ( !fscanf(fp, "NY=%lu\n", &setting->NY) ) return READING_ERROR;
-  if ( !fscanf(fp, "NZ=%lu\n", &setting->NZ) ) return READING_ERROR;
+  if ( !fscanf(fp, "NX=%d\n", &setting->NX) ) return READING_ERROR;
+  if ( !fscanf(fp, "NY=%d\n", &setting->NY) ) return READING_ERROR;
+  if ( !fscanf(fp, "NZ=%d\n", &setting->NZ) ) return READING_ERROR;
   if ( !fscanf(fp, "TSTART=%lf\n", &setting->TSTART) ) return READING_ERROR;
   if ( !fscanf(fp, "TFINISH=%lf\n", &setting->TFINISH) ) return READING_ERROR;
   if ( !fscanf(fp, "dt=%lf\n", &setting->dt) ) return READING_ERROR;
@@ -43,12 +43,12 @@ int readFunction(const char *path, double *u, int nx, int ny, int nz) {
   return OK;
 }
 
-void writeFunction1D(const char *path, double *function, size_t NX) {
+void writeFunction1D(const char *path, double *u, int nx, int ny, int y, int z) {
   FILE *fp;
   fp = fopen(path, "w");
 
-  for (int i = 1; i < NX - 1; i++)
-    fprintf(fp, "%.15le\n", function[i+(NX)*1+(NX)*18*1]);
+  for (int i = 1; i < nx - 1; i++)
+    fprintf(fp, "%.15le\n", u[i+nx*y+nx*ny*z]);
 
   fclose(fp);
 }
