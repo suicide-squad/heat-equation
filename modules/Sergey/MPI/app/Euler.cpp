@@ -29,9 +29,11 @@ int main(int argc, char** argv) {
 
     if (rankP == ROOT) {
         // File variables
-        string functionFile = "../../initial/function.txt";
+//        string functionFile = "../../initial/function.txt";
+        string functionFile = "../../initial/function2.txt";
 //        string functionFile = "../../initial_test/function.txt";
-        string settingFile = "../../initial/setting.ini";
+//        string settingFile = "../../initial/setting.ini";
+        string settingFile = "../../initial/setting2.ini";
 //        string settingFile = "../../initial_test/setting.ini";
 
         // Read task settings
@@ -302,7 +304,7 @@ int main(int argc, char** argv) {
 
 
         // Output
-        FILE *outfile = fopen("../../result/Sergey/Sergey_Euler_MPI_full.txt", "w");
+        FILE *outfile = fopen("../../result/Sergey/Sergey_Euler_MPI2_full.txt", "w");
 //        FILE *outfile = fopen("../../result/Sergey/Sergey_Euler_MPI_full_test2.txt", "w");
 
         for (int i = 0; i < task.fullVectSize; ++i) {
