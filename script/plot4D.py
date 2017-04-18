@@ -5,11 +5,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 
-def buildPlot3D(ax, title, u, usmin, usmax, x, y, z, xmax, xmin, ymax, ymin, zmax, zmin):
+def buildPlot3D(ax, title, u, rstride, cstride, usmin, usmax,
+                 x, y, z, xmax, xmin, ymax, ymin, zmax, zmin):
     norm = colors.Normalize(vmin=usmin, vmax=usmax, clip=True)
     alpha = 0.8
-    rstride = 2
-    cstride = 2
     linewidth = 0.5
     antialiased = True
     shade = False
@@ -89,19 +88,21 @@ def main():
     usmin = us.min()
     usmax = us.max()
 
+    cstride = max(NX // 20, 1)
+    rstride = max(NY // 20, 1)
+    print(rstride, cstride)
+
     fig = plt.figure("HEAD EQUATION")
 
     ax1 = fig.add_subplot(121, projection = '3d')
-    buildPlot3D(ax1, tstart, us, usmin, usmax, x, y, z, xmin,
-                xmax, ymin, ymax, zmin, zmax)
+    buildPlot3D(ax1, tstart, us, rstride, cstride, usmin, usmax, x, y, z, xmin, xmax, ymin, ymax, zmin, zmax)
 
     pathFinish = os.path.join(os.pardir, "result", sys.argv[3])
     uf = np.loadtxt(pathFinish)
     uf.shape = (NZ, NY, NX)
 
     ax2 = fig.add_subplot(122, projection = '3d')
-    buildPlot3D(ax2, tfinish, uf, usmin, usmax, x, y, z, xmin,
-                xmax, ymin, ymax, zmin, zmax)
+    buildPlot3D(ax2, tfinish, uf, rstride, cstride, usmin, usmax, x, y, z, xmin, xmax, ymin, ymax, zmin, zmax)
 
     m = cm.ScalarMappable(cmap=cm.jet)
     m.set_array(us[:][:][0])
