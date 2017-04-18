@@ -1,3 +1,4 @@
+
 import numpy as np
 from math import cos, pi
 import os
@@ -29,10 +30,9 @@ def main():
     U = np.array([function(x, y, z) for z in Z for y in Y for x in X])
 
     pathOutput = os.path.join(os.pardir, "initial", 'function.txt')
-    np.savetxt(pathOutput, U, delimiter='\n')
+    np.savetxt(pathOutput, U, fmt='%.15e',delimiter='\n')
 
 if __name__ == "__main__":
     print("Start")
     main()
-    print("Finish")
-
+print("Finish")
