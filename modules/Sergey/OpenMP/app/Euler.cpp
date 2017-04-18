@@ -13,8 +13,10 @@ int main(int argc, char** argv) {
     int prevTime, currTime;
 
     // File variables
-    string functionFile = "../../initial/function.txt";
-    string settingFile = "../../initial/setting.ini";
+//    string functionFile = "../../initial/function.txt";
+    string functionFile = "../../initial_test/function.txt";
+//    string settingFile = "../../initial/setting.ini";
+    string settingFile = "../../initial_test/setting.ini";
 
     // Read task settings
     Task task;
@@ -58,7 +60,7 @@ int main(int argc, char** argv) {
 
 
     // Output
-    FILE *outfile = fopen("../../result/Sergey/Sergey_Euler_full.txt", "w");
+    FILE *outfile = fopen("../../result/Sergey/Sergey_Euler_full_test.txt", "w");
 
     for (int i = 0; i < task.fullVectSize; ++i) {
         if ( i % (task.nX + 2) != 0 && i % (task.nX + 2) != task.nX + 1)

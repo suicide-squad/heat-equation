@@ -98,6 +98,8 @@ int main(int argc, char** argv) {
 
 //        cout << ": " <<  << endl;
 
+//        startTime = MPI_Wtime();
+
         for (int l = 0; l < sizeP; ++l) {
             for (int k = 0; k < proc_nZ; ++k) {
                 for (int i = 0; i < block_size; ++i) {
@@ -113,6 +115,9 @@ int main(int argc, char** argv) {
 //                }
             }
         }
+
+//        endTime = MPI_Wtime();
+//        printf("Repack run time %.15lf\n", endTime - startTime);
     }
 
 //    if (rankP == ROOT) {
@@ -139,12 +144,25 @@ int main(int argc, char** argv) {
                  proc_vect[0], proc_vect_size, MPI_DOUBLE, ROOT, MPI_COMM_WORLD);
 
 
+//    if (rankP == 3) {
+//        cout << "print vectors ========" << endl;
+//        for (int i = 0; i < proc_vect_size; ++i) {
+//            cout << proc_vect[0][i] << endl << flush;
+//        }
+//    }
+
+    MPI_Barrier(MPI_COMM_WORLD);
     // value for the matrix
     MatrixValue matrixValue;
     matrixValue.x1 = (task.sigma * task.dt) / (task.timeStepX * task.timeStepX);
     matrixValue.y1 = (task.sigma * task.dt) / (task.timeStepY * task.timeStepY);
     matrixValue.z1 = (task.sigma * task.dt) / (task.timeStepZ * task.timeStepZ);
     matrixValue.x2Comp = (1 - 2 * matrixValue.x1 - 2 * matrixValue.y1 - 2 * matrixValue.z1);
+
+//    cout << "matrixValue.x1: " << matrixValue.x1 << endl;
+//    cout << "matrixValue.y1: " << matrixValue.y1 << endl;
+//    cout << "matrixValue.z1: " << matrixValue.z1 << endl;
+//    cout << "matrixValue.x2C: " << matrixValue.x2Comp << endl;
 
     // init and fill sparseMatrix
     SparseMatrix spMat;
@@ -233,16 +251,65 @@ int main(int argc, char** argv) {
     MPI_Gather(proc_vect[0], proc_vect_size, MPI_DOUBLE,
                sendvect, proc_vect_size, MPI_DOUBLE, ROOT, MPI_COMM_WORLD);
 
+//    if (rankP == ROOT) {
+//        cout << "print sendvect vect" << endl;
+//        cout.precision(15);
+//        for (int i = 0; i < sizeP * proc_vect_size; ++i) {
+//            cout << i << "  " << sendvect[i] << endl;
+//        }
+//        cout << "end" << endl;
+//    }in_Vect_offset
+
+
+
     if (rankP == ROOT) {
-        for (int l = 0; l < sizeP; ++l) {
-            for (int k = 0; k < proc_nZ; ++k) {
+        for (int j = 0; j < task.fullVectSize; ++j) {
+            vect[j] = -10000;
+        }
+
+        cout << "sizeP: " << sizeP << endl;
+        cout << "proc_nX: " << proc_nX << endl;
+        cout << "proc_nY: " << proc_nY << endl;
+        cout << "proc_nZ: " << proc_nZ << endl;
+        cout << "block_size: " << block_size << endl;
+        cout << "proc_vect_size: " << proc_vect_size << endl;
+        cout << "realSizeZ: " << realSizeZ << endl;
+        cout << "lineSizeP: " << lineSizeP << endl;
+//        cout << ": " <<  << endl;
+
+        for (int p = 0; p < sizeP; ++p) {
+            int proc_lvl_offset = (p / lineSizeP) * lineSizeP * proc_nZ * proc_realSizeZ;
+            int fist_second_offset = (p % lineSizeP) * proc_nY * proc_realSizeY;
+            for (int z = 0; z < proc_nZ; ++z) {
+//                int first_second_offset =
+//                int Y_offset = z * realSizeZ;
                 for (int i = 0; i < block_size; ++i) {
-                    vect[(l % lineSizeP) * lineSizeP * realSizeZ + k * realSizeZ + i] =
-                            sendvect[l * proc_vect_size + k * block_size + i];
+//                    cout << "(p / lineSizeP) * lineSizeP: " << (p / lineSizeP) * lineSizeP << endl;
+//                    cout << "proc_nZ * realSizeZ: " << proc_nZ * realSizeZ << endl;
+//                    cout << "proc_lvl_offset: " << proc_lvl_offset << endl;
+//                    cout << "in_Z_offset: " << in_Z_offset << endl;
+//                    cout << "====" << endl;
+                    vect[proc_lvl_offset + fist_second_offset + z * realSizeZ + i] =
+                            sendvect[p * proc_vect_size + z * block_size + i];
+//                    if (sendvect[l * proc_vect_size + k * block_size + i] == 0) {
+//                        cout << "value: " << sendvect[l * proc_vect_size + k * block_size + i] << endl;
+//                        cout << "l: " << l << endl;
+//                        cout << "k: " << k << endl;
+//                        cout << "i: " << i << endl;
+//                        cout << "======" << endl;
+//                    }
                 }
             }
         }
     }
+
+
+//    for (int l = 0; l < sizeP; ++l) {
+//        for (int k = 0; k < proc_nZ; ++k) {
+//            for (int i = 0; i < block_size; ++i) {
+//                sendvect[l * proc_vect_size + k * block_size + i]
+//                        = vect[(l % lineSizeP) * lineSizeP * realSizeZ + k * realSizeZ + i];
+
 
     if (rankP == ROOT) {
         endTime = MPI_Wtime();
@@ -251,6 +318,7 @@ int main(int argc, char** argv) {
 
         // Output
         FILE *outfile = fopen("../../result/Sergey/Sergey_Euler_MPI_full.txt", "w");
+//        FILE *outfile = fopen("../../result/Sergey/Sergey_Euler_MPI_full_test2.txt", "w");
 
         for (int i = 0; i < task.fullVectSize; ++i) {
             if ( i % (task.nX + 2) != 0 && i % (task.nX + 2) != task.nX + 1)
