@@ -13,4 +13,6 @@ endif()
 find_package( MPI REQUIRED )
 include_directories( ${MPI_INCLUDE_PATH} )
 
+find_library(M_LIB m)
+
 add_subdirectory(modules)

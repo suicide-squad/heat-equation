@@ -3,69 +3,9 @@
 //
 
 #include <stdlib.h>
+#include <math.h>
 
 #include "sgpu.h"
-
-void pack(double *ex, double *u, int NX, int NY, int NZ, op which) {
-  switch ( which ) {
-    case Y_LEFT_SEND: {
-      for (int z = 0; z < NZ; z++)
-        for (int x = 0; x < NX; x++)
-          ex[x + z * NX] = u[x + 1 * NX + z * NX * NY];
-      break;
-    }
-    case Y_RIGHT_SEND: {
-      for (int z = 0; z < NZ; z++)
-        for (int x = 0; x < NX; x++)
-          ex[x + z * NX] = u[x + (NY - 2) * NX + z * NX * NY];
-      break;
-    }
-    case Z_TOP_SEND: {
-      for (int y = 0; y < NY; y++)
-        for (int x = 0; x < NX; x++)
-          ex[x + y * NX] = u[x + y * NX + 1 * NX * NY];
-      break;
-    }
-    case Z_DOWN_SEND: {
-      for (int y = 0; y < NY; y++)
-        for (int x = 0; x < NX; x++)
-          ex[x + y * NX] = u[x + y * NX + (NZ - 2) * NX * NY];
-      break;
-    }
-  }
-  return;
-}
-
-void unpack (double *ex, double *u, int NX, int NY, int NZ, op which) {
-  switch ( which ) {
-    case Y_LEFT_RECV: {
-      for (int z = 0; z < NZ; z++)
-        for (int x = 0; x < NX; x++)
-          u[x + 0 * NX + z * NX * NY] = ex[x + z * NX];
-      break;
-    }
-    case Y_RIGHT_RECV: {
-      for (int z = 0; z < NZ; z++)
-        for (int x = 0; x < NX; x++)
-          u[x + (NY - 1) * NX + z * NX * NY] = ex[x + z * NX];
-      break;
-    }
-    case Z_DOWN_RECV: {
-      for (int y = 0; y < NY; y++)
-        for (int x = 0; x < NX; x++)
-          u[x + y * NX + 0 * NX * NY] = ex[x + y * NX];
-      break;
-    }
-    case Z_TOP_RECV: {
-      for (int y = 0; y < NY; y++)
-        for (int x = 0; x < NX; x++)
-          u[x + y * NX + (NZ - 1) * NX * NY] = ex[x + y * NX];
-      break;
-    }
-  }
-  return;
-}
-
 
 void scatter_by_block(double *u, double *u_chunk, int NX, int NY, int NYr, int NZr, MPI_Comm gridComm) {
   int ndim = 0;
@@ -120,4 +60,14 @@ void gather_by_block(double *u, double *u_chunk, int NX, int NY, int NYr, int NZ
     MPI_Gather(u_z, NX*NY*(NZr), MPI_DOUBLE, u + NY*NX, NX*NY*(NZr), MPI_DOUBLE, 0, colComm);
     free(u_z);
   }
+}
+void get_blocks(int* blockY, int* blockZ, int sizeProc) {
+  int sqrtNum = (int)sqrt(sizeProc);
+  for(int i = sqrtNum; i <= sizeProc; i++) {
+    if (sizeProc % i == 0) {
+      *blockY = i;
+      break;
+    }
+  }
+  *blockZ = sizeProc/(*blockY);
 }

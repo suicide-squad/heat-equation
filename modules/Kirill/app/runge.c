@@ -29,7 +29,7 @@ int main() {
   int NY = (setting.NY + 2);
   int NZ = (setting.NZ + 2);
 
-  size_t dim = NX*NY*NZ;
+  size_t dim = (size_t)NX*NY*NZ;
   u = (double *)malloc(sizeof(double)*dim);
   memset(u, 0, dim* sizeof(double));
 
@@ -117,7 +117,7 @@ int main() {
   double t1 = omp_get_wtime();
   double diffTime = t1 - t0;
   printf("Time -\t%.3lf\n", diffTime);
-  writeFunction1D(pathResult, u, NX);
+  writeFunction1D(pathResult, u, NX, 0, 0, 0);
   writeFunction3D(pathResult3D, u, NX, NY, NZ);
 
   freeSpMat(&A);

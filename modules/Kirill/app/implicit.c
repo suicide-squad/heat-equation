@@ -34,11 +34,11 @@ int main() {
 
   if (error != OK) return error;
 
-  size_t dim = (setting.NX + 2) * setting.NY * setting.NZ;
+  size_t dim = (size_t)(setting.NX + 2) * setting.NY * setting.NZ;
   function = (double *) malloc(sizeof(double) * dim);
   memset(function, 0, dim * sizeof(double));
 
-  error = readFunction(pathFunction, &function, setting.NX, 0, 0);
+  error = readFunction(pathFunction, function, setting.NX, 0, 0);
 
   if (error != OK) return error;
 
@@ -57,9 +57,9 @@ int main() {
   coeffs[1] = setting.dt * setting.SIGMA / (hY * hY);
   coeffs[2] = setting.dt * setting.SIGMA / (hZ * hZ);
 
-  size_t NZ = setting.NX*setting.NY*setting.NZ*6;
-  int NX = (int) setting.NX + 2;
-  int NXY = (int) setting.NY * NX;
+  size_t NZ = (size_t)setting.NX*setting.NY*setting.NZ*6;
+  int NX = setting.NX + 2;
+  int NXY = setting.NY * NX;
 
   initSpMat(&mat, NZ, dim);
   createImplicitSpMat(&mat, coeffs, (int) dim, NX, NXY);
@@ -113,7 +113,7 @@ int main() {
   double t1 = omp_get_wtime();
   double diffTime = t1 - t0;
   printf("Time -\t%.3lf\n", diffTime);
-  writeFunction1D(pathResult, function, setting.NX);
+  writeFunction1D(pathResult, function, setting.NX, 0, 0, 0);
 
   freeSpMat(&mat);
   free(function);

@@ -18,8 +18,7 @@ typedef enum {
   Z_DOWN_RECV
 } op;
 
-void pack(double *ex, double *u, int NX, int NY, int NZ, op which);
-void unpack (double *ex, double *u, int NX, int NY, int NZ, op which);
+void get_blocks(int *blockY, int *blockZ, int sizeProc);
 
 void scatter_by_block(double *u, double *u_chunk, int NX, int NY, int NYr, int NZr, MPI_Comm gridComm);
 void gather_by_block(double *u, double *u_chunk, int NX, int NY, int NYr, int NZr, MPI_Comm gridComm);
