@@ -79,6 +79,10 @@ int main(int argc, char** argv) {
     int block_size = proc_nX * proc_nY;
 //    int block_size_add = block_size + ADD_CELL * 2;
 
+    int proc_realSizeY = realSizeX;
+    int proc_realSizeZ = proc_realSizeY * proc_nY;
+
+
     // Generate data for send
     double *sendvect;
 
@@ -100,19 +104,14 @@ int main(int argc, char** argv) {
 
 //        startTime = MPI_Wtime();
 
-        for (int l = 0; l < sizeP; ++l) {
-            for (int k = 0; k < proc_nZ; ++k) {
+        for (int p = 0; p < sizeP; ++p) {
+            int proc_lvl_offset = (p / lineSizeP) * lineSizeP * proc_nZ * proc_realSizeZ;
+            int fist_second_offset = (p % lineSizeP) * proc_nY * proc_realSizeY;
+            for (int z = 0; z < proc_nZ; ++z) {
                 for (int i = 0; i < block_size; ++i) {
-                    sendvect[l * proc_vect_size + k * block_size + i]
-                            = vect[(l % lineSizeP) * lineSizeP * realSizeZ + k * realSizeZ + i];
-//                    cout << "l * proc_vect_size + k * block_size + i: " << l * proc_vect_size + k * block_size + i << endl;
-//                    cout << "proc_nZ * realSizeZ * l + k * block_size + i: " << proc_nZ * realSizeZ * l + k * block_size + i << endl;
+                    sendvect[p * proc_vect_size + z * block_size + i] =
+                            vect[proc_lvl_offset + fist_second_offset + z * realSizeZ + i];
                 }
-//                if (k == 0) {
-//                    for (int i = 0; i < sizeP * proc_vect_size; ++i) {
-//                        cout << sendvect[i] << endl;
-//                    }
-//                }
             }
         }
 
@@ -175,8 +174,8 @@ int main(int argc, char** argv) {
     fillMatrix3d6Expr_wo_boundaries(spMat, matrixValue, proc_nX - 2, proc_nY, proc_nZ);
 
 
-    int proc_realSizeY = realSizeX;
-    int proc_realSizeZ = proc_realSizeY * proc_nY;
+    proc_realSizeY = realSizeX;
+    proc_realSizeZ = proc_realSizeY * proc_nY;
 
     int prevTime = 0;
     int currTime = 1;
@@ -281,23 +280,9 @@ int main(int argc, char** argv) {
             int proc_lvl_offset = (p / lineSizeP) * lineSizeP * proc_nZ * proc_realSizeZ;
             int fist_second_offset = (p % lineSizeP) * proc_nY * proc_realSizeY;
             for (int z = 0; z < proc_nZ; ++z) {
-//                int first_second_offset =
-//                int Y_offset = z * realSizeZ;
                 for (int i = 0; i < block_size; ++i) {
-//                    cout << "(p / lineSizeP) * lineSizeP: " << (p / lineSizeP) * lineSizeP << endl;
-//                    cout << "proc_nZ * realSizeZ: " << proc_nZ * realSizeZ << endl;
-//                    cout << "proc_lvl_offset: " << proc_lvl_offset << endl;
-//                    cout << "in_Z_offset: " << in_Z_offset << endl;
-//                    cout << "====" << endl;
                     vect[proc_lvl_offset + fist_second_offset + z * realSizeZ + i] =
                             sendvect[p * proc_vect_size + z * block_size + i];
-//                    if (sendvect[l * proc_vect_size + k * block_size + i] == 0) {
-//                        cout << "value: " << sendvect[l * proc_vect_size + k * block_size + i] << endl;
-//                        cout << "l: " << l << endl;
-//                        cout << "k: " << k << endl;
-//                        cout << "i: " << i << endl;
-//                        cout << "======" << endl;
-//                    }
                 }
             }
         }
