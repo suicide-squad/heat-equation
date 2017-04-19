@@ -38,7 +38,7 @@ int main() {
   function = (double *) malloc(sizeof(double) * dim);
   memset(function, 0, dim * sizeof(double));
 
-  error = readFunction(pathFunction, function, setting.NX, 0, 0);
+  error = readFunction(pathFunction, function, setting.NX, 0, 0, 0);
 
   if (error != OK) return error;
 

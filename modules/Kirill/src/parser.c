@@ -29,15 +29,15 @@ int readSetting(const char *path, Setting *setting) {
   return OK;
 }
 
-int readFunction(const char *path, double *u, int nx, int ny, int nz) {
+int readFunction(const char* path, double* u, int nx, int ny, int nz, int shift) {
   FILE *fp;
   if ( !(fp = fopen(path, "r")) )
     return NO_FILE;
 
-  for (int z = 1; z < nz-1; z++)
-    for (int y = 1; y < ny-1; y++)
+  for (int z = shift; z < nz - shift; z++)
+    for (int y = shift; y < ny - shift; y++)
       for (int x = 1; x < nx-1; x++)
-        if (!fscanf(fp, "%lf\n", &u[x + y * nx + z * nx * ny]))
+        if (!fscanf(fp, "%lf\n", &u[x + y*nx + z*nx*ny]))
           return READING_ERROR;
 
   return OK;
@@ -53,12 +53,12 @@ void writeFunction1D(const char *path, double *u, int nx, int ny, int y, int z) 
   fclose(fp);
 }
 
-void writeFunction3D(const char *path, double *u, int nx, int ny, int nz) {
+void writeFunction3D(const char* path, double* u, int nx, int ny, int nz, int shift) {
   FILE *fp;
   fp = fopen(path, "w");
 
-  for (int z = 1; z < nz-1; z++)
-    for (int y = 1; y < ny-1; y++)
+  for (int z = shift; z < nz-shift; z++)
+    for (int y = shift; y < ny-shift; y++)
       for (int x = 1; x < nx-1; x++)
         fprintf(fp, "%.15le\n", u[x + y*nx + z*nx*ny]);
   fclose(fp);
