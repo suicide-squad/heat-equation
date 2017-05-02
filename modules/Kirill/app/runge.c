@@ -6,7 +6,6 @@
 #include <math.h>
 #include <stdlib.h>
 #include <mpi.h>
-#include <parser.h>
 
 #include "sp_mat.h"
 #include "parser.h"
@@ -14,14 +13,15 @@
 
 #define ROOT 0
 #define DIM_CART 2
-#define RESERVE 8
+#define SHIFT 4
+#define RESERVE SHIFT*2
 
 #define IND(x,y,z) ((x) + (y)*NX + (z)*NX*(NYr + RESERVE))
 
 const char pathSetting[] = "../../../../initial/setting.ini";
 const char pathFunction[] = "../../../../initial/function.txt";
 const char pathResult[] = "../../../../result/Kirill/runge3D_MPI.txt";
-const char pathResult3D[] = "../../../../result/Kirill/result_runge3D_MPI.txt";
+const char pathResult3D[] = "../../../../result/Kirill/result_runge3D_MPI_4.txt";
 
 int main(int argc, char **argv) {
   int sizeP, rankP;
@@ -46,7 +46,6 @@ int main(int argc, char **argv) {
   if (rankP == ROOT) {
 
     int error = readSetting(pathSetting, &setting);
-
     if (error != OK) return error;
 
     NX = (setting.NX + 2);
@@ -55,16 +54,15 @@ int main(int argc, char **argv) {
 
     size_t dim = (size_t) NX*NY*NZ;
     u = (double*) calloc(dim, sizeof(double));
-
-    error = readFunction(pathFunction, u, NX, NY, NZ, RESERVE/2);
+    error = readFunction(pathFunction, u, NX, NY, NZ, SHIFT);
 
     if (error != OK) return error;
 
     sizeTime = (size_t) ((setting.TFINISH - setting.TSTART)/setting.dt);
 
-#if ENABLE_PARALLEL
-    printf("PARALLEL VERSION!\n");
-#endif
+    #if ENABLE_PARALLEL
+      printf("PARALLEL VERSION!\n");
+    #endif
     printf("TimeSize -\t%lu\n", sizeTime);
 
     double dx = fabs(setting.XSTART - setting.XEND)/setting.NX;
@@ -73,10 +71,10 @@ int main(int argc, char **argv) {
 
     dt = setting.dt;
 
-    coeffs[0] = -2.0*setting.SIGMA*(coeffs[1] + coeffs[2] + coeffs[3]);
     coeffs[1] = setting.SIGMA/(dx*dx);
     coeffs[2] = setting.SIGMA/(dy*dy);
     coeffs[3] = setting.SIGMA/(dz*dz);
+    coeffs[0] = -2.0*setting.SIGMA*(coeffs[1] + coeffs[2] + coeffs[3]);
   }
 
   MPI_Bcast(&sizeTime, 1, MPI_UNSIGNED_LONG, ROOT, MPI_COMM_WORLD);
@@ -114,8 +112,7 @@ int main(int argc, char **argv) {
   u_chunk = (double *)malloc(sizeof(double)*dimChunk);
   un_chunk = (double *)malloc(sizeof(double)*dimChunk);
 
-//  TODO:
-//  SCATTER
+  //  SCATTER
   scatter_by_block(u, u_chunk, NX, NY, NYr, NZr, gridComm, RESERVE);
   if (rankP == ROOT) printf("Scatter!\n");
 
@@ -159,14 +156,16 @@ int main(int argc, char **argv) {
 
   // Создание типа плоскости XY и XZ
 
-//  TODO:
-//  Подумать над передачей четырёх плокостей!
+  //  TODO:
+  //  Подумать над передачей четырёх плокостей!
+
+  //  Каждая плоскость представляет SHIFT подряд идущих плоскостей
   MPI_Datatype planeXY;
-  MPI_Type_vector(NZr+RESERVE, NX, NX*(NYr+RESERVE), MPI_DOUBLE, &planeXY);
+  MPI_Type_vector(NZr+RESERVE, NX*SHIFT, NX*(NYr+RESERVE), MPI_DOUBLE, &planeXY);
   MPI_Type_commit(&planeXY);
 
   MPI_Datatype planeXZ;
-  MPI_Type_contiguous(NX*(NYr+RESERVE), MPI_DOUBLE, &planeXZ);
+  MPI_Type_contiguous(NX*SHIFT*(NYr+RESERVE), MPI_DOUBLE, &planeXZ);
   MPI_Type_commit(&planeXZ);
   // *****************************
 
@@ -176,26 +175,28 @@ int main(int argc, char **argv) {
   }
 
   // ОСНОВНЫЕ ВЫЧИСЛЕНИЯ
+  for (int t = 1; t <= 1
+      ; t++) {
 
-  for (int t = 1; t <= 1; t++) {
-//    TODO:
-//    ОБНОВИТЬ ПЕРЕДАЧУ ГРАНИЦ!!!
-//
     //    Передача влево по Y
-//    MPI_Sendrecv(&u_chunk[IND(0, NYr, 0)],  4, planeXY, rank_left, 0,
-//                 &u_chunk[IND(0, 0, 0)], 4, planeXY, rank_right, 0, gridComm, &status[0]);
-////
-    //    Передача вправо по Y
-    MPI_Sendrecv(&u_chunk[IND(0, 4, 0)], 1, planeXY, rank_right, 1,
-                 &u_chunk[IND(0, NYr+4, 0)],  1, planeXY, rank_left, 1, gridComm, &status[1]);
+    MPI_Sendrecv(&u_chunk[IND(0, 4, 0)],  1, planeXY, rank_left, 0,
+                 &u_chunk[IND(0, NYr+RESERVE-4, 0)], 1, planeXY, rank_right, 0,
+                 gridComm, &status[0]);
 
-//    //    Передача вниз по Z
+    //    Передача вправо по Y
+    MPI_Sendrecv(&u_chunk[IND(0, NYr+RESERVE-8, 0)], 1, planeXY, rank_right, 1,
+                 &u_chunk[IND(0, 0, 0)],  1, planeXY, rank_left, 1,
+                 gridComm, &status[1]);
+
+    //    Передача вниз по Z
     MPI_Sendrecv(&u_chunk[IND(0, 0, 4)], 1, planeXZ, rank_down, 2,
-                 &u_chunk[IND(0, 0, NZr+4)],  1, planeXZ, rank_top, 2, gridComm, &status[2]);
-//
-//    //    Передача вверх по Z
-    MPI_Sendrecv(&u_chunk[IND(0, 0, NZr)], 1, planeXZ, rank_top, 3,
-                 &u_chunk[IND(0, 0, 0)], 1, planeXZ, rank_down, 3, gridComm, &status[3]);
+                 &u_chunk[IND(0, 0, NZr+RESERVE-4)],  1, planeXZ, rank_top, 2,
+                 gridComm, &status[2]);
+
+    //    Передача вверх по Z
+    MPI_Sendrecv(&u_chunk[IND(0, 0, NZr+RESERVE-8)], 1, planeXZ, rank_top, 3,
+                 &u_chunk[IND(0, 0, 0)], 1, planeXZ, rank_down, 3,
+                 gridComm, &status[3]);
 
     // k1 = A*U
     multMV(&k1, A, u_chunk);
@@ -223,15 +224,14 @@ int main(int argc, char **argv) {
     t1 = omp_get_wtime();
   }
 
-//  TODO:
-//  GATHER
+  //  GATHER
   gather_by_block(u, u_chunk, NX, NY, NYr, NZr, RESERVE, gridComm);
 
   if (rankP == ROOT) {
     double diffTime = t1 - t0;
     printf("Time -\t%.3lf\n", diffTime);
-    writeFunction1D(pathResult, u, NX, 1, 4, 4);
-    writeFunction3D(pathResult3D, u, NX, NY, NZ, RESERVE/2);
+    writeFunction1D(pathResult, u, NX, NY, SHIFT, SHIFT);
+    writeFunction3D(pathResult3D, u, NX, NY, NZ, SHIFT);
     free(u);
   }
   MPI_Type_free(&planeXY);
