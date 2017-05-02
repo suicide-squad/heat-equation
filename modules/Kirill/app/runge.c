@@ -18,10 +18,10 @@
 
 #define IND(x,y,z) ((x) + (y)*NX + (z)*NX*(NYr + RESERVE))
 
-const char pathSetting[] = "../../../../initial/setting.ini";
-const char pathFunction[] = "../../../../initial/function.txt";
-const char pathResult[] = "../../../../result/Kirill/runge3D_MPI.txt";
-const char pathResult3D[] = "../../../../result/Kirill/result_runge3D_MPI_4.txt";
+const char pathSetting[] = "../../../../initial/setting2.ini";
+const char pathFunction[] = "../../../../initial/function2.txt";
+const char pathResult[] = "../../../../result/Kirill/runge3D_2_MPI_4.txt";
+const char pathResult3D[] = "../../../../result/Kirill/result2_runge3D_MPI_4.txt";
 
 int main(int argc, char **argv) {
   int sizeP, rankP;
@@ -175,8 +175,7 @@ int main(int argc, char **argv) {
   }
 
   // ОСНОВНЫЕ ВЫЧИСЛЕНИЯ
-  for (int t = 1; t <= 1
-      ; t++) {
+  for (int t = 1; t <= sizeTime; t++) {
 
     //    Передача влево по Y
     MPI_Sendrecv(&u_chunk[IND(0, 4, 0)],  1, planeXY, rank_left, 0,
