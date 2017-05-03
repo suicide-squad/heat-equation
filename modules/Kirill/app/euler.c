@@ -18,8 +18,8 @@
 
 const char pathSetting[] = "../../../../initial/setting2.ini";
 const char pathFunction[] = "../../../../initial/function2.txt";
-const char pathResult1D[] = "../../../../result/Kirill/1.txt";
-const char pathResult3D[] = "../../../../result/Kirill/result_1p.txt";
+const char pathResult1D[] = "../../../../result/Kirill/tmp2_1D.txt";
+const char pathResult3D[] = "../../../../result/Kirill/tmp2_3D.txt";
 
 int main(int argc, char **argv) {
   int sizeP, rankP;
@@ -145,7 +145,7 @@ int main(int argc, char **argv) {
   // *****************************
 
   // ОСНОВНЫЕ ВЫЧИСЛЕНИЯ
-  for (int t = 1; t <= sizeTime; t++) {
+  for (int t = 1; t <= 1; t++) {
     //  ОБМЕН ГРАНИЦ ПО Y И Z
 
     //    Передача влево по Y
@@ -184,7 +184,8 @@ int main(int argc, char **argv) {
   if (rankP == ROOT) {
     double diffTime = t1 - t0;
     printf("Time -\t%.3lf\n", diffTime);
-    writeFunction1D(pathResult1D, u, NX, NY, 4,16);
+    writeFunction1DX(pathResult1D, u, NX, NY, 7, 7);
+   // writeFunction1DY(pathResult1D, u, NX, NY, 1, 1, 1);
     writeFunction3D(pathResult3D, u, NX, NY, NZ, 1);
 
     printf("DONE!!!\n");

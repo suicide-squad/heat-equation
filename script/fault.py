@@ -12,7 +12,7 @@ def main():
         print("Например: fault.py Kirill/euler.txt Kirill/implicit.txt")
         return
 
-    settingPath = os.path.join(os.path.pardir, "initial", "setting.ini")
+    settingPath = os.path.join(os.path.pardir, "initial", "setting2.ini")
     with open(settingPath, 'r') as file:
         pattern = re.compile('[A-Za-z]+=-?\d+')
         setting = { line.split('=')[0] : float(line.split('=')[1])

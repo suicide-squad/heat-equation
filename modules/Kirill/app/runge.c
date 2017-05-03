@@ -20,8 +20,8 @@
 
 const char pathSetting[] = "../../../../initial/setting2.ini";
 const char pathFunction[] = "../../../../initial/function2.txt";
-const char pathResult[] = "../../../../result/Kirill/runge3D_2_MPI_4.txt";
-const char pathResult3D[] = "../../../../result/Kirill/result2_runge3D_MPI_4.txt";
+const char pathResult[] = "../../../../result/Kirill/tmp1D.txt";
+const char pathResult3D[] = "../../../../result/Kirill/tmp3D.txt";
 
 int main(int argc, char **argv) {
   int sizeP, rankP;
@@ -175,27 +175,27 @@ int main(int argc, char **argv) {
   }
 
   // ОСНОВНЫЕ ВЫЧИСЛЕНИЯ
-  for (int t = 1; t <= sizeTime; t++) {
+  for (int t = 1; t <= 1; t++) {
 
     //    Передача влево по Y
-    MPI_Sendrecv(&u_chunk[IND(0, 4, 0)],  1, planeXY, rank_left, 0,
-                 &u_chunk[IND(0, NYr+RESERVE-4, 0)], 1, planeXY, rank_right, 0,
-                 gridComm, &status[0]);
-
-    //    Передача вправо по Y
-    MPI_Sendrecv(&u_chunk[IND(0, NYr+RESERVE-8, 0)], 1, planeXY, rank_right, 1,
-                 &u_chunk[IND(0, 0, 0)],  1, planeXY, rank_left, 1,
-                 gridComm, &status[1]);
-
-    //    Передача вниз по Z
-    MPI_Sendrecv(&u_chunk[IND(0, 0, 4)], 1, planeXZ, rank_down, 2,
-                 &u_chunk[IND(0, 0, NZr+RESERVE-4)],  1, planeXZ, rank_top, 2,
-                 gridComm, &status[2]);
-
-    //    Передача вверх по Z
-    MPI_Sendrecv(&u_chunk[IND(0, 0, NZr+RESERVE-8)], 1, planeXZ, rank_top, 3,
-                 &u_chunk[IND(0, 0, 0)], 1, planeXZ, rank_down, 3,
-                 gridComm, &status[3]);
+//    MPI_Sendrecv(&u_chunk[IND(0, NYr, 0)],  1, planeXY, rank_left, 0,
+//                 &u_chunk[IND(0, 0, 0)], 1, planeXY, rank_right, 0,
+//                 gridComm, &status[0]);
+//
+//    //    Передача вправо по Y
+//    MPI_Sendrecv(&u_chunk[IND(0, SHIFT, 0)], 1, planeXY, rank_right, 1,
+//                 &u_chunk[IND(0, NYr+SHIFT, 0)],  1, planeXY, rank_left, 1,
+//                 gridComm, &status[1]);
+//
+//    //    Передача вниз по Z
+//    MPI_Sendrecv(&u_chunk[IND(0, 0, 4)], 1, planeXZ, rank_down, 2,
+//                 &u_chunk[IND(0, 0, NZr+SHIFT)],  1, planeXZ, rank_top, 2,
+//                 gridComm, &status[2]);
+//
+//    //    Передача вверх по Z
+//    MPI_Sendrecv(&u_chunk[IND(0, 0, NZr)], 1, planeXZ, rank_top, 3,
+//                 &u_chunk[IND(0, 0, 0)], 1, planeXZ, rank_down, 3,
+//                 gridComm, &status[3]);
 
     // k1 = A*U
     multMV(&k1, A, u_chunk);
@@ -229,7 +229,8 @@ int main(int argc, char **argv) {
   if (rankP == ROOT) {
     double diffTime = t1 - t0;
     printf("Time -\t%.3lf\n", diffTime);
-    writeFunction1D(pathResult, u, NX, NY, SHIFT, SHIFT);
+    writeFunction1DX(pathResult, u, NX, NY, 10, 10);
+   // writeFunction1DY(pathResult, u, NX, NY, 1, 4, SHIFT);
     writeFunction3D(pathResult3D, u, NX, NY, NZ, SHIFT);
     free(u);
   }
