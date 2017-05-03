@@ -14,6 +14,7 @@ file(GLOB  src_runge runge.c)
 
 add_executable(${target} ${src_runge})
 target_link_libraries(${target} ${LIBRARY})
+target_link_libraries(${target} ${MPI_LIBRARIES})
 
 ## НЕЯВНЫЙ МЕТОД
 set(target "${APP}_implicit")

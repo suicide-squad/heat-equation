@@ -16,10 +16,10 @@
 
 #define IND(x,y,z) ((x) + (y)*NX + (z)*NX*(NYr + 2))
 
-const char pathSetting[] = "../../../../initial/setting.ini";
-const char pathFunction[] = "../../../../initial/function.txt";
+const char pathSetting[] = "../../../../initial/setting2.ini";
+const char pathFunction[] = "../../../../initial/function2.txt";
 const char pathResult1D[] = "../../../../result/Kirill/1.txt";
-const char pathResult3D[] = "../../../../result/Kirill/result_4p.txt";
+const char pathResult3D[] = "../../../../result/Kirill/result_1p.txt";
 
 int main(int argc, char **argv) {
   int sizeP, rankP;
@@ -53,15 +53,15 @@ int main(int argc, char **argv) {
     dim = (size_t)(setting.NX + 2)*(setting.NY+2)*(setting.NZ+2);
     u = (double *) calloc(dim, sizeof(double));
 
-    error = readFunction(pathFunction, u, setting.NX+2, setting.NY+2, setting.NZ+2);
+    error = readFunction(pathFunction, u, setting.NX + 2, setting.NY + 2, setting.NZ + 2, 1);
 
     if (error != OK) return error;
 
     sizeTime = (size_t) ((setting.TFINISH - setting.TSTART) / setting.dt);
 
-    #if ENABLE_PARALLEL
-      printf("PARALLEL VERSION 2.0!\n");
-    #endif
+#if ENABLE_PARALLEL
+    printf("PARALLEL VERSION 2.0!\n");
+#endif
 
     printf("TimeSize -\t%lu\n", sizeTime);
 
@@ -81,9 +81,9 @@ int main(int argc, char **argv) {
 
   MPI_Bcast(&sizeTime, 1, MPI_UNSIGNED_LONG, ROOT, MPI_COMM_WORLD);
   MPI_Bcast(coeffs, 4, MPI_DOUBLE, ROOT, MPI_COMM_WORLD);
-  MPI_Bcast(&NX, 1, MPI_UNSIGNED_LONG, ROOT, MPI_COMM_WORLD);
-  MPI_Bcast(&NY, 1, MPI_UNSIGNED_LONG, ROOT, MPI_COMM_WORLD);
-  MPI_Bcast(&NZ, 1, MPI_UNSIGNED_LONG, ROOT, MPI_COMM_WORLD);
+  MPI_Bcast(&NX, 1, MPI_INT, ROOT, MPI_COMM_WORLD);
+  MPI_Bcast(&NY, 1, MPI_INT, ROOT, MPI_COMM_WORLD);
+  MPI_Bcast(&NZ, 1, MPI_INT, ROOT, MPI_COMM_WORLD);
 
   //  Определения числа процессов в каждом измерении
   get_blocks(&blockYP, &blockZP, sizeP);
@@ -116,7 +116,7 @@ int main(int argc, char **argv) {
   double *tmp;
 
   //  SCATTER
-  scatter_by_block(u, u_chunk, NX, NY, NYr, NZr, gridComm);
+  scatter_by_block(u, u_chunk, NX, NY, NYr, NZr, gridComm, 2);
 
   size_t nonZero = dimChunk*7;
 
@@ -127,7 +127,7 @@ int main(int argc, char **argv) {
   MPI_Cart_shift(gridComm, 1, 1, &rank_left, &rank_right);
   MPI_Cart_shift(gridComm, 0, 1, &rank_down, &rank_top);
 
- // printf("rank - %d; left %d; right %d; top %d; down %d\n", rankP, rank_left, rank_right, rank_top, rank_down);
+  // printf("rank - %d; left %d; right %d; top %d; down %d\n", rankP, rank_left, rank_right, rank_top, rank_down);
 
   if (rankP == ROOT) {
     printf("START!\n");
@@ -170,21 +170,22 @@ int main(int argc, char **argv) {
     u_chunk = un_chunk;
     un_chunk = tmp;
 
-    //  *******************
   }
+  //  *******************
+
   if (rankP == ROOT) {
     printf("FINISH!\n\n");
     t1 = omp_get_wtime();
   }
 
   //        GATHER
-  gather_by_block(u, u_chunk, NX, NY, NYr, NZr, gridComm);
+  gather_by_block(u, u_chunk, NX, NY, NYr, NZr, 2, gridComm);
 
   if (rankP == ROOT) {
     double diffTime = t1 - t0;
     printf("Time -\t%.3lf\n", diffTime);
-    writeFunction1D(pathResult1D, u, NX, NY, 4,16);
-    writeFunction3D(pathResult3D, u, NX, NY, NZ);
+    writeFunction1D(pathResult1D, u, NX, NY, 1, 1);
+    writeFunction3D(pathResult3D, u, NX, NY, NZ, 1);
 
     printf("DONE!!!\n");
     free(u);
