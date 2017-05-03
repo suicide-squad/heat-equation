@@ -18,8 +18,8 @@
 
 const char pathSetting[] = "../../../../initial/setting2.ini";
 const char pathFunction[] = "../../../../initial/function2.txt";
-const char pathResult1D[] = "../../../../result/Kirill/tmp2_1D.txt";
-const char pathResult3D[] = "../../../../result/Kirill/tmp2_3D.txt";
+const char pathResult1D[] = "../../../../result/Kirill/1.txt";
+const char pathResult3D[] = "../../../../result/Kirill/result_1p.txt";
 
 int main(int argc, char **argv) {
   int sizeP, rankP;
@@ -59,9 +59,9 @@ int main(int argc, char **argv) {
 
     sizeTime = (size_t) ((setting.TFINISH - setting.TSTART) / setting.dt);
 
-    #if ENABLE_PARALLEL
-      printf("PARALLEL VERSION 2.0!\n");
-    #endif
+#if ENABLE_PARALLEL
+    printf("PARALLEL VERSION 2.0!\n");
+#endif
 
     printf("TimeSize -\t%lu\n", sizeTime);
 
@@ -127,7 +127,7 @@ int main(int argc, char **argv) {
   MPI_Cart_shift(gridComm, 1, 1, &rank_left, &rank_right);
   MPI_Cart_shift(gridComm, 0, 1, &rank_down, &rank_top);
 
- // printf("rank - %d; left %d; right %d; top %d; down %d\n", rankP, rank_left, rank_right, rank_top, rank_down);
+  // printf("rank - %d; left %d; right %d; top %d; down %d\n", rankP, rank_left, rank_right, rank_top, rank_down);
 
   if (rankP == ROOT) {
     printf("START!\n");
@@ -145,7 +145,7 @@ int main(int argc, char **argv) {
   // *****************************
 
   // ОСНОВНЫЕ ВЫЧИСЛЕНИЯ
-  for (int t = 1; t <= 1; t++) {
+  for (int t = 1; t <= sizeTime; t++) {
     //  ОБМЕН ГРАНИЦ ПО Y И Z
 
     //    Передача влево по Y
@@ -184,8 +184,7 @@ int main(int argc, char **argv) {
   if (rankP == ROOT) {
     double diffTime = t1 - t0;
     printf("Time -\t%.3lf\n", diffTime);
-    writeFunction1DX(pathResult1D, u, NX, NY, 7, 7);
-   // writeFunction1DY(pathResult1D, u, NX, NY, 1, 1, 1);
+    writeFunction1D(pathResult1D, u, NX, NY, 1, 1);
     writeFunction3D(pathResult3D, u, NX, NY, NZ, 1);
 
     printf("DONE!!!\n");
