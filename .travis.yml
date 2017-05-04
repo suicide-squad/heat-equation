@@ -21,6 +21,7 @@ addons:
     packages:
       - gcc-5
       - g++-5
+      - mpi-default-dev
 
 before_install:
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then export CXX="g++-5" CC="gcc-5"; fi
