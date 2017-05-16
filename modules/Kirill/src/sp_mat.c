@@ -149,7 +149,7 @@ void createExplicitSpMat(SpMatrix *mat, TYPE coeffs[4], int dim, int NX, int NXY
 }
 void createExplicitSpMatV2(SpMatrix *mat, TYPE coeffs[4], int nx, int ny, int nz) {
   int index = 0, k = 0;
-  int shiftIndexX, shiftIndexY, shiftIndexZ;
+  int shiftIndexX=0, shiftIndexY=0, shiftIndexZ=0;
   int shift;
   mat->rowIndex[0] = 0;
 
@@ -201,11 +201,10 @@ void createExplicitSpMatV2(SpMatrix *mat, TYPE coeffs[4], int nx, int ny, int nz
         mat->value[index] = coeffs[1];
         index++;
 
-// Отсутствие смещения
+        // Отсутствие смещения
         mat->col[index] = realIndex;
          mat->value[index] = coeffs[0];
         index++;
-
 
         // ***************************************
         //      Смещение на x + 1
@@ -215,9 +214,9 @@ void createExplicitSpMatV2(SpMatrix *mat, TYPE coeffs[4], int nx, int ny, int nz
         index++;
 
 
-    // ***************************************
-    //      Смещение на y + 1
-    // ***************************************
+        // ***************************************
+        //      Смещение на y + 1
+        // ***************************************
         mat->col[index] = realIndex + nx;
         mat->value[index] = coeffs[2];
         index++;

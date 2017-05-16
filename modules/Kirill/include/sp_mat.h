@@ -26,10 +26,10 @@ typedef double TYPE;
 
 // CSR (Compressed Sparse Rows)
 typedef struct {
-  TYPE* value;      // Элементы матрицы
+  double* value;    // Элементы матрицы
   int* col;         // Номера столбцов для каждого элемента
   int* rowIndex;    // Место каждого ненулевого элемента в каждой строке
-  size_t nz;        // Количество ненулевых
+  size_t nz;        // Количество ненулевых элементов
   size_t nRows;     // Количество строк
 } SpMatrix;
 

@@ -21,7 +21,7 @@
 const char pathSetting[] = "../../../../initial/setting2.ini";
 const char pathFunction[] = "../../../../initial/function2.txt";
 const char pathResult[] = "../../../../result/Kirill/tmp1D.txt";
-const char pathResult3D[] = "../../../../result/Kirill/tmp3D.txt";
+const char pathResult3D[] = "../../../../result/Kirill/RUNGE_3D.txt";
 
 int main(int argc, char **argv) {
   int sizeP, rankP;

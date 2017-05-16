@@ -16,10 +16,10 @@
 
 #define IND(x,y,z) ((x) + (y)*NX + (z)*NX*(NYr + 2))
 
-const char pathSetting[] = "../../../../initial/setting2.ini";
-const char pathFunction[] = "../../../../initial/function2.txt";
-const char pathResult1D[] = "../../../../result/Kirill/1.txt";
-const char pathResult3D[] = "../../../../result/Kirill/result_1p.txt";
+const char pathSetting[] = "../../../../initial/setting3.ini";
+const char pathFunction[] = "../../../../initial/function3.txt";
+const char pathResult1D[] = "../../../../result/Kirill/euler1D_3.txt";
+const char pathResult3D[] = "../../../../result/Kirill/euler3D_3.txt";
 
 int main(int argc, char **argv) {
   int sizeP, rankP;
@@ -110,8 +110,10 @@ int main(int argc, char **argv) {
   MPI_Cart_coords(gridComm, rankP, DIM_CART, gridCoords);
 
   size_t dimChunk = (size_t)NX*(NYr+2)*(NZr+2);
-  u_chunk = (double *)malloc(sizeof(double)*dimChunk);
+  u_chunk = (double *)calloc(dimChunk, sizeof(double));
   un_chunk = (double *)malloc(sizeof(double)*dimChunk);
+
+
 
   double *tmp;
 
@@ -121,6 +123,7 @@ int main(int argc, char **argv) {
   size_t nonZero = dimChunk*7;
 
   initSpMat(&mat, nonZero, dimChunk);
+//  createExplicitSpMat(&mat, coeffs, dimChunk, NX, NX*(NYr+2));
   createExplicitSpMatV2(&mat, coeffs, NX, NYr+2, NZr+2);
 
   int rank_left, rank_right, rank_down, rank_top;
@@ -144,8 +147,28 @@ int main(int argc, char **argv) {
   MPI_Type_commit(&planeXZ);
   // *****************************
 
+  for (int z = 0; z < NZr+2; z++) {
+    for (int y = 0; y < NYr+2; y++) {
+      for (int x = 0; x < NX; x++) {
+        if (x==0)
+          u_chunk[IND(x,y,z)]=un_chunk[IND(x+1,y,z)];
+        if (x==NX-1)
+          u_chunk[IND(x,y,z)]=un_chunk[IND(x-1,y,z)];
+        if (y==0)
+          u_chunk[IND(x,y,z)]=un_chunk[IND(x,y+1,z)];
+        if (y==NYr+1)
+          u_chunk[IND(x,y,z)]=un_chunk[IND(x,y-1,z)];
+        if (z==0)
+          u_chunk[IND(x,y,z)]=un_chunk[IND(x,y,z+1)];
+        if (z==NZr+1)
+          u_chunk[IND(x,y,z)]=un_chunk[IND(x,y,z-1)];
+      }
+    }
+  }
+
+
   // ОСНОВНЫЕ ВЫЧИСЛЕНИЯ
-  for (int t = 1; t <= sizeTime; t++) {
+  for (int t = 1; t <= 1; t++) {
     //  ОБМЕН ГРАНИЦ ПО Y И Z
 
     //    Передача влево по Y
