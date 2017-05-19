@@ -6,6 +6,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <mpi.h>
+#include <string.h>
 
 #include "sp_mat.h"
 #include "parser.h"
@@ -18,12 +19,18 @@
 
 const char pathSetting[] = "../../../../initial/setting3.ini";
 const char pathFunction[] = "../../../../initial/function3.txt";
+
 const char pathResult1D[] = "../../../../result/Kirill/euler1D_3.txt";
 const char pathResult3D[] = "../../../../result/Kirill/euler3D_3.txt";
+
+//const char pathSetting[] = "setting3.ini";
+//const char pathFunction[] = "function3.txt";
+//const char pathResult3D[] = "res.txt";
 
 int main(int argc, char **argv) {
   int sizeP, rankP;
   size_t sizeTime;
+
 
   MPI_Status status[4];
   double t0 = 0.0, t1 = 0.0;
@@ -88,7 +95,7 @@ int main(int argc, char **argv) {
   //  Определения числа процессов в каждом измерении
   get_blocks(&blockYP, &blockZP, sizeP);
 
-  if (rankP == ROOT) printf("blockY %d blockZ %d\n", blockYP, blockZP);
+//  if (rankP == ROOT) printf("blockY %d blockZ %d\n", blockYP, blockZP);
 
   NYr = (NY - 2)/blockYP;
   NZr = (NZ - 2)/blockZP;
@@ -101,7 +108,7 @@ int main(int argc, char **argv) {
 
   dims[0] = blockZP; dims[1] = blockYP;
   //  наличие циклов в каждой размерности
-  periods[0] = 1; periods[1] = 1;
+  periods[0] = 0; periods[1] = 0;
   //  разрешение системе менять номера процессов
   int reorder = 0;
   MPI_Cart_create(MPI_COMM_WORLD, DIM_CART, dims, periods, reorder, &gridComm);
@@ -113,8 +120,6 @@ int main(int argc, char **argv) {
   u_chunk = (double *)calloc(dimChunk, sizeof(double));
   un_chunk = (double *)malloc(sizeof(double)*dimChunk);
 
-
-
   double *tmp;
 
   //  SCATTER
@@ -124,13 +129,13 @@ int main(int argc, char **argv) {
 
   initSpMat(&mat, nonZero, dimChunk);
 //  createExplicitSpMat(&mat, coeffs, dimChunk, NX, NX*(NYr+2));
-  createExplicitSpMatV2(&mat, coeffs, NX, NYr+2, NZr+2);
+  createExplicitSpMatV2(&mat, coeffs, NX, NYr + 2, NZr + 2);
 
   int rank_left, rank_right, rank_down, rank_top;
-  MPI_Cart_shift(gridComm, 1, 1, &rank_left, &rank_right);
+  MPI_Cart_shift(gridComm, 1, -1, &rank_left, &rank_right);
   MPI_Cart_shift(gridComm, 0, 1, &rank_down, &rank_top);
 
-  // printf("rank - %d; left %d; right %d; top %d; down %d\n", rankP, rank_left, rank_right, rank_top, rank_down);
+//   printf("rank - %d; left %d; right %d; top %d; down %d\n", rankP, rank_left, rank_right, rank_top, rank_down);
 
   if (rankP == ROOT) {
     printf("START!\n");
@@ -151,24 +156,24 @@ int main(int argc, char **argv) {
     for (int y = 0; y < NYr+2; y++) {
       for (int x = 0; x < NX; x++) {
         if (x==0)
-          u_chunk[IND(x,y,z)]=un_chunk[IND(x+1,y,z)];
+          u_chunk[IND(x,y,z)]=u_chunk[IND(x+1,y,z)];
         if (x==NX-1)
-          u_chunk[IND(x,y,z)]=un_chunk[IND(x-1,y,z)];
+          u_chunk[IND(x,y,z)]=u_chunk[IND(x-1,y,z)];
         if (y==0)
-          u_chunk[IND(x,y,z)]=un_chunk[IND(x,y+1,z)];
+          u_chunk[IND(x,y,z)]=u_chunk[IND(x,y+1,z)];
         if (y==NYr+1)
-          u_chunk[IND(x,y,z)]=un_chunk[IND(x,y-1,z)];
+          u_chunk[IND(x,y,z)]=u_chunk[IND(x,y-1,z)];
         if (z==0)
-          u_chunk[IND(x,y,z)]=un_chunk[IND(x,y,z+1)];
+          u_chunk[IND(x,y,z)]=u_chunk[IND(x,y,z+1)];
         if (z==NZr+1)
-          u_chunk[IND(x,y,z)]=un_chunk[IND(x,y,z-1)];
+          u_chunk[IND(x,y,z)]=u_chunk[IND(x,y,z-1)];
       }
     }
   }
 
 
   // ОСНОВНЫЕ ВЫЧИСЛЕНИЯ
-  for (int t = 1; t <= 1; t++) {
+  for (int t = 1; t <= sizeTime; t++) {
     //  ОБМЕН ГРАНИЦ ПО Y И Z
 
     //    Передача влево по Y
@@ -207,10 +212,10 @@ int main(int argc, char **argv) {
   if (rankP == ROOT) {
     double diffTime = t1 - t0;
     printf("Time -\t%.3lf\n", diffTime);
-    writeFunction1D(pathResult1D, u, NX, NY, 1, 1);
+//    writeFunction1D(pathResult1D, u, NX, NY, 1, 1);
     writeFunction3D(pathResult3D, u, NX, NY, NZ, 1);
 
-    printf("DONE!!!\n");
+    printf("DONE!!!\n\n");
     free(u);
   }
 

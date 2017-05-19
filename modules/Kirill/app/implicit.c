@@ -11,11 +11,22 @@
 #include "sp_mat.h"
 #include "parser.h"
 
-const double EPS = 1e-10;
+const char pathSetting[] = "../../../../initial/setting3.ini";
+const char pathFunction[] = "../../../../initial/function3.txt";
 
-const char pathSetting[] = "../../../../initial/setting.ini";
-const char pathFunction[] = "../../../../initial/function.txt";
-const char pathResult[] = "../../../../result/Kirill/implicit3D.txt";
+const char pathResult3D[] = "../../../../result/Kirill/implicit3D_3.txt";
+
+//const char pathSetting[] = "setting3.ini";
+//
+//const char pathResult3D[] = "res.txt";
+//const char pathFunction[] = "function3.txt";
+
+#define EPS 1e-10
+
+#define SHIFT 1
+#define RESERVE SHIFT*2
+
+#define IND(x,y,z) ((x) + (y)*NX + (z)*NX*NY)
 
 bool dist(double *x1, double *x2, size_t N) {
   for (int i = 0; i < N; i++)
@@ -28,83 +39,93 @@ int main() {
   SpMatrix mat;
   Setting setting;
   double coeffs[3];
-  double *function;
+  double *u;
   int error;
+  int NX, NY, NZ;
   error = readSetting(pathSetting, &setting);
 
   if (error != OK) return error;
 
-  size_t dim = (size_t)(setting.NX + 2) * setting.NY * setting.NZ;
-  function = (double *) malloc(sizeof(double) * dim);
-  memset(function, 0, dim * sizeof(double));
+  NX = setting.NX + RESERVE;
+  NY = setting.NY + RESERVE;
+  NZ = setting.NZ + RESERVE;
 
-  error = readFunction(pathFunction, function, setting.NX, 0, 0, 0);
+  size_t dim = (size_t)NX*NY*NZ;
+  u = (double *)calloc(dim, sizeof(double));
+
+  error = readFunction(pathFunction, u, NX, NY, NZ, SHIFT);
 
   if (error != OK) return error;
 
   size_t sizeTime = (size_t) ((setting.TFINISH - setting.TSTART) / setting.dt);
 
-#if ENABLE_PARALLEL
-  printf("PARALLEL VERSION!\n");
-#endif
+  #if ENABLE_PARALLEL
+    printf("PARALLEL VERSION!\n");
+  #endif
   printf("TimeSize -\t%lu\n", sizeTime);
 
-  double hX = fabs(setting.XSTART - setting.XEND) / setting.NX;
-  double hY = fabs(setting.YSTART - setting.YEND) / setting.NY;
-  double hZ = fabs(setting.ZSTART - setting.ZEND) / setting.NZ;
+  double dx = fabs(setting.XSTART - setting.XEND) / setting.NX;
+  double dy = fabs(setting.YSTART - setting.YEND) / setting.NY;
+  double dz = fabs(setting.ZSTART - setting.ZEND) / setting.NZ;
 
-  coeffs[0] = setting.dt * setting.SIGMA / (hX * hX);
-  coeffs[1] = setting.dt * setting.SIGMA / (hY * hY);
-  coeffs[2] = setting.dt * setting.SIGMA / (hZ * hZ);
+  coeffs[0] = setting.dt*setting.SIGMA/(dx*dx);
+  coeffs[1] = setting.dt*setting.SIGMA/(dy*dy);
+  coeffs[2] = setting.dt*setting.SIGMA/(dz*dz);
 
-  size_t NZ = (size_t)setting.NX*setting.NY*setting.NZ*6;
-  int NX = setting.NX + 2;
-  int NXY = setting.NY * NX;
+  size_t nonZero = (size_t)NX*NY*NZ*6;
 
-  initSpMat(&mat, NZ, dim);
-  createImplicitSpMat(&mat, coeffs, (int) dim, NX, NXY);
+  initSpMat(&mat, nonZero, dim);
+  createImplicitSpMat(&mat, coeffs, NX, NY, NZ);
 
 //  printSpMat(mat);
 
-  double *X1 = (double *) malloc(sizeof(double) * dim);
-  double *X2 = (double *) malloc(sizeof(double) * dim);
+  double *x1 = (double *) malloc(sizeof(double) * dim);
+  double *x2 = (double *) malloc(sizeof(double) * dim);
   double *tmp;
-
-  double t0 = omp_get_wtime();
-
-  // ОСНОВНЫЕ ВЫЧИСЛЕНИЯ
 
   int countIter = 0;
 
-  double k = 1.0/(1.0 + 2.0*setting.SIGMA*setting.dt*(1.0/(hX*hX) + 1.0/(hY*hY) + 1.0/(hZ*hZ)));
+  double k = 1.0/(1.0 + 2.0*setting.SIGMA*setting.dt*(1.0/(dx*dx) + 1.0/(dy*dy) + 1.0/(dz*dz)));
 
+  // ОСНОВНЫЕ ВЫЧИСЛЕНИЯ
+
+  double t0 = omp_get_wtime();
   for (int t = 1; t <= sizeTime; t++) {
-    memcpy(X1, function, dim*sizeof(double));
+    memcpy(x1, u, dim*sizeof(double));
 
     do {
-      multMV(&X2, mat, X1);
+      multMV(&x2, mat, x1);
 
-      for (int i = 0; i < dim; i++) {
-        if (i % NX != 0 && i % NX != NX - 1) {
-          X2[i] = (function[i] + X2[i]) * k;
-        }
-        if (i % NX == 1) {
-          X2[i - 1] = X2[i];
-        }
-        if (i % NX == NX - 1) {
-          X2[i] = X2[i - 1];
+
+      for (int z = 1; z < NZ-1; z++) {
+        for (int y = 1; y < NY-1; y++) {
+          for (int x = 1; x < NX-1; x++) {
+            x2[IND(x,y,z)] = (u[IND(x,y,z)] + x2[IND(x,y,z)]) * k;
+            if (x==1)
+              x2[IND(x-1,y,z)]=x2[IND(x,y,z)];
+            if (x==NX-2)
+              x2[IND(x+1,y,z)]=x2[IND(x,y,z)];
+            if (y==1)
+              x2[IND(x,y-1,z)]=x2[IND(x,y,z)];
+            if (y==NY-2)
+              x2[IND(x,y+1,z)]=x2[IND(x,y,z)];
+            if (z==1)
+              x2[IND(x,y,z-1)]=x2[IND(x,y,z)];
+            if (z==NZ-2)
+              x2[IND(x,y,z+1)]=x2[IND(x,y,z)];
+          }
         }
       }
 
-      tmp = X1;
-      X1 = X2;
-      X2 = tmp;
+      tmp = x1;
+      x1 = x2;
+      x2 = tmp;
 
       countIter++;
 
-    } while (!dist(X1, X2, dim));
+    } while (!dist(x1, x2, dim));
 
-    memcpy(function, X1, dim*sizeof(double));
+    memcpy(u, x1, dim*sizeof(double));
 
   }
 
@@ -113,11 +134,11 @@ int main() {
   double t1 = omp_get_wtime();
   double diffTime = t1 - t0;
   printf("Time -\t%.3lf\n", diffTime);
-  writeFunction1D(pathResult, function, setting.NX, 0, 0, 0);
+  writeFunction3D(pathResult3D, u, NX, NY, NZ, SHIFT);
 
   freeSpMat(&mat);
-  free(function);
-  free(X1);
-  free(X2);
+  free(u);
+  free(x1);
+  free(x2);
   return 0;
 }

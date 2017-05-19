@@ -5,10 +5,11 @@
 #ifndef HEAT_EQUATION_SPARSE_SPARSE_H
 #define HEAT_EQUATION_SPARSE_SPARSE_H
 
-#define ENABLE_PARALLEL 1
+#define ENABLE_PARALLEL 0
 //#define _COMPLEX_
 
 #include <omp.h>
+#include <mpi.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -51,11 +52,12 @@ void denseMult(TYPE **result, TYPE **mat, TYPE *vec, size_t dim);
 // Создание матрицы для явных схем
 void createExplicitSpMat(SpMatrix *mat, TYPE coeffs[4], int dim, int NX, int NXY);
 
+void createExplicitSpMatV2R(SpMatrix* mat, TYPE* coeffs, int nx, int ny, int nz, MPI_Comm comm);
 void createExplicitSpMatV2(SpMatrix *mat, TYPE coeffs[4], int nx, int ny, int nz);
 
 
 // Создание матрицы для неявных схем
-void createImplicitSpMat(SpMatrix *mat, TYPE coeffs[3], int dim, int NX, int NXY);
+void createImplicitSpMat(SpMatrix* mat, TYPE coeffs[3], int nx, int ny, int nz);
 
 #ifdef __cplusplus
 }
