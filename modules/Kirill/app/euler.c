@@ -12,6 +12,8 @@
 #include "parser.h"
 #include "sgpu.h"
 
+#include <sys/utsname.h>
+
 #define ROOT 0
 #define DIM_CART 2
 
@@ -29,8 +31,14 @@ const char pathResult3D[] = "../../../../result/Kirill/euler3D_3.txt";
 
 int main(int argc, char **argv) {
   int sizeP, rankP;
+
+  size_t len=80;
+  char name[len];
+  gethostname(name, len);
+
+  printf("Name host - %s\n", name);
   size_t sizeTime;
-  omp_set_num_threads(2);
+//  omp_set_num_threads(2);
 
   MPI_Status status[4];
   double t0 = 0.0, t1 = 0.0;
