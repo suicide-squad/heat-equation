@@ -42,6 +42,9 @@ int main() {
   double *u;
   int error;
   int NX, NY, NZ;
+
+  omp_set_num_threads(2);
+
   error = readSetting(pathSetting, &setting);
 
   if (error != OK) return error;

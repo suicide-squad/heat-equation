@@ -39,6 +39,7 @@ int main(int argc, char **argv) {
   MPI_Status status[4];
   int blockYP = 0, blockZP = 0;
 
+  omp_set_num_threads(2);
   MPI_Init(&argc, &argv);
 
   MPI_Comm_size(MPI_COMM_WORLD, &sizeP);

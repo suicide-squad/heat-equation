@@ -23,7 +23,7 @@ void freeSpMat(SpMatrix* mat) {
 
 void multMV(TYPE** result, SpMatrix mat, TYPE* vec) {
   TYPE localSum;
-  #pragma omp parallel private(localSum) num_threads(2) if (ENABLE_PARALLEL)
+  #pragma omp parallel private(localSum) if (ENABLE_PARALLEL)
   {
     #pragma omp for nowait
     for (int i = 0; i < mat.nRows; i++) {
@@ -36,7 +36,7 @@ void multMV(TYPE** result, SpMatrix mat, TYPE* vec) {
 }
 
 void sumV(TYPE **result, TYPE *U, TYPE *k1, TYPE *k2, TYPE *k3, TYPE *k4, size_t N, double h) {
-  #pragma omp parallel for num_threads(2) if (ENABLE_PARALLEL)
+  #pragma omp parallel for if (ENABLE_PARALLEL)
   for (int i = 0; i < N; i++)
     (*result)[i] = U[i] + h*(k1[i] + 2.0*k2[i] + 2.0*k3[i] + k4[i]);
 }

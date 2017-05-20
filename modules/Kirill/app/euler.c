@@ -30,7 +30,7 @@ const char pathResult3D[] = "../../../../result/Kirill/euler3D_3.txt";
 int main(int argc, char **argv) {
   int sizeP, rankP;
   size_t sizeTime;
-
+  omp_set_num_threads(2);
 
   MPI_Status status[4];
   double t0 = 0.0, t1 = 0.0;
