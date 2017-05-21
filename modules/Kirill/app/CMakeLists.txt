@@ -5,7 +5,7 @@ file(GLOB  src_euler euler.c)
 
 add_executable(${target} ${src_euler})
 target_link_libraries(${target} ${LIBRARY})
-target_link_libraries(${target} ${MPI_LIBRARIES})
+target_link_libraries(${target} ${MPI_C_LIBRARIES})
 
 # РУНГЕ-КУТТ
 set(target "${APP}_runge")
@@ -14,7 +14,7 @@ file(GLOB  src_runge runge.c)
 
 add_executable(${target} ${src_runge})
 target_link_libraries(${target} ${LIBRARY})
-target_link_libraries(${target} ${MPI_LIBRARIES})
+target_link_libraries(${target} ${MPI_C_LIBRARIES})
 
 ## НЕЯВНЫЙ МЕТОД
 set(target "${APP}_implicit")

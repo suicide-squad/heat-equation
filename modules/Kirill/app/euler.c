@@ -218,13 +218,12 @@ int main(int argc, char **argv) {
   }
 
   //        GATHER
-  gather_by_block(u, u_chunk, NX, NY, NYr, NZr, 2, gridComm);
+  gather_by_block(u, u_chunk, NX, NY, NYr, NZr, RESERVE, gridComm);
 
   if (rankP == ROOT) {
     double diffTime = t1 - t0;
     printf("Time -\t%.3lf\n", diffTime);
-//    writeFunction1D(pathResult1D, u, NX, NY, 1, 1);
-    writeFunction3D(pathResult3D, u, NX, NY, NZ, 1);
+    writeFunction3D(pathResult3D, u, NX, NY, NZ, SHIFT);
 
     printf("DONE!!!\n\n");
     free(u);
