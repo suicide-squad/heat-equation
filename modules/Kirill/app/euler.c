@@ -16,6 +16,8 @@
 
 #define ROOT 0
 #define DIM_CART 2
+#define SHIFT 1
+#define RESERVE SHIFT*2
 
 #define IND(x,y,z) ((x) + (y)*NX + (z)*NX*(NYr + 2))
 
@@ -32,13 +34,12 @@ const char pathResult3D[] = "../../../../result/Kirill/euler3D_3.txt";
 int main(int argc, char **argv) {
   int sizeP, rankP;
 
-  size_t len=80;
+  const size_t len=80;
   char name[len];
   gethostname(name, len);
 
   printf("Name host - %s\n", name);
   size_t sizeTime;
-//  omp_set_num_threads(2);
 
   MPI_Status status[4];
   double t0 = 0.0, t1 = 0.0;
@@ -65,18 +66,20 @@ int main(int argc, char **argv) {
 
     if (error != OK) return error;
 
-    dim = (size_t)(setting.NX + 2)*(setting.NY+2)*(setting.NZ+2);
+    dim = (size_t)(setting.NX+RESERVE)*(setting.NY+RESERVE)*(setting.NZ+RESERVE);
     u = (double *) calloc(dim, sizeof(double));
 
-    error = readFunction(pathFunction, u, setting.NX + 2, setting.NY + 2, setting.NZ + 2, 1);
+    error = readFunction(pathFunction, u, setting.NX+RESERVE,
+                         setting.NY+RESERVE, setting.NZ+RESERVE, SHIFT);
 
     if (error != OK) return error;
 
     sizeTime = (size_t) ((setting.TFINISH - setting.TSTART) / setting.dt);
 
-#if ENABLE_PARALLEL
-    printf("PARALLEL VERSION 2.0!\n");
-#endif
+    #if ENABLE_PARALLEL
+      printf("PARALLEL VERSION 2.0!\n");
+      omp_set_num_threads(2);
+    #endif
 
     printf("TimeSize -\t%lu\n", sizeTime);
 
@@ -89,9 +92,9 @@ int main(int argc, char **argv) {
     coeffs[2] = setting.dt * setting.SIGMA / (dy * dy);
     coeffs[3] = setting.dt * setting.SIGMA / (dz * dz);
 
-    NX = setting.NX + 2;
-    NY = setting.NY + 2;
-    NZ = setting.NZ + 2;
+    NX = setting.NX + RESERVE;
+    NY = setting.NY + RESERVE;
+    NZ = setting.NZ + RESERVE;
   }
 
   MPI_Bcast(&sizeTime, 1, MPI_UNSIGNED_LONG, ROOT, MPI_COMM_WORLD);
@@ -105,8 +108,8 @@ int main(int argc, char **argv) {
 
 //  if (rankP == ROOT) printf("blockY %d blockZ %d\n", blockYP, blockZP);
 
-  NYr = (NY - 2)/blockYP;
-  NZr = (NZ - 2)/blockZP;
+  NYr = (NY - RESERVE)/blockYP;
+  NZr = (NZ - RESERVE)/blockZP;
 
   MPI_Comm gridComm;
 
@@ -124,14 +127,14 @@ int main(int argc, char **argv) {
   // Определение координат процесса в решетке
   MPI_Cart_coords(gridComm, rankP, DIM_CART, gridCoords);
 
-  size_t dimChunk = (size_t)NX*(NYr+2)*(NZr+2);
+  size_t dimChunk = (size_t)NX*(NYr+RESERVE)*(NZr+RESERVE);
   u_chunk = (double *)calloc(dimChunk, sizeof(double));
   un_chunk = (double *)malloc(sizeof(double)*dimChunk);
 
   double *tmp;
 
   //  SCATTER
-  scatter_by_block(u, u_chunk, NX, NY, NYr, NZr, gridComm, 2);
+  scatter_by_block(u, u_chunk, NX, NY, NYr, NZr, gridComm, RESERVE);
 
   size_t nonZero = dimChunk*7;
 

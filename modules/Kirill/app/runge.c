@@ -18,15 +18,14 @@
 
 #define IND(x,y,z) ((x) + (y)*NX + (z)*NX*(NYr + RESERVE))
 
-//const char pathSetting[] = "../../../../initial/setting3.ini";
-//const char pathFunction[] = "../../../../initial/function3.txt";
-//const char pathResult[] = "../../../../result/Kirill/tmp1D.txt";
-//const char pathResult3D[] = "../../../../result/Kirill/runge3D_3.txt";
+const char pathSetting[] = "../../../../initial/setting3.ini";
+const char pathFunction[] = "../../../../initial/function3.txt";
+const char pathResult3D[] = "../../../../result/Kirill/runge3D_3.txt";
 //const char pathResult3D[] = "../../../../result/Kirill/runge3D_3_MPI.txt";
 
-const char pathSetting[] = "setting3.ini";
-const char pathFunction[] = "function3.txt";
-const char pathResult3D[] = "res.txt";
+//const char pathSetting[] = "setting3.ini";
+//const char pathFunction[] = "function3.txt";
+//const char pathResult3D[] = "res.txt";
 
 int main(int argc, char **argv) {
   int sizeP, rankP;
@@ -39,7 +38,10 @@ int main(int argc, char **argv) {
   MPI_Status status[4];
   int blockYP = 0, blockZP = 0;
 
-  omp_set_num_threads(2);
+  const size_t len=80;
+  char name[len];
+  gethostname(name, len);
+
   MPI_Init(&argc, &argv);
 
   MPI_Comm_size(MPI_COMM_WORLD, &sizeP);
@@ -68,6 +70,7 @@ int main(int argc, char **argv) {
 
     #if ENABLE_PARALLEL
       printf("PARALLEL VERSION!\n");
+      omp_set_num_threads(2);
     #endif
     printf("TimeSize -\t%lu\n", sizeTime);
 
