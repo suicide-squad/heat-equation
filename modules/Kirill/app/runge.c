@@ -7,6 +7,8 @@
 #include <stdlib.h>
 #include <mpi.h>
 
+#include <sys/utsname.h>
+
 #include "sp_mat.h"
 #include "parser.h"
 #include "sgpu.h"
@@ -21,7 +23,6 @@
 const char pathSetting[] = "../../../../initial/setting3.ini";
 const char pathFunction[] = "../../../../initial/function3.txt";
 const char pathResult3D[] = "../../../../result/Kirill/runge3D_3.txt";
-//const char pathResult3D[] = "../../../../result/Kirill/runge3D_3_MPI.txt";
 
 //const char pathSetting[] = "setting3.ini";
 //const char pathFunction[] = "function3.txt";
@@ -38,15 +39,15 @@ int main(int argc, char **argv) {
   MPI_Status status[4];
   int blockYP = 0, blockZP = 0;
 
-  const size_t len=80;
-  char name[len];
-  gethostname(name, len);
-
   MPI_Init(&argc, &argv);
 
   MPI_Comm_size(MPI_COMM_WORLD, &sizeP);
   MPI_Comm_rank(MPI_COMM_WORLD, &rankP);
-  if (rankP == ROOT) printf("MPI RUN ON %d PROCESS\n", sizeP);
+
+  const size_t len=80;
+  char nameHost[len];
+  gethostname(nameHost, len);
+  printf("rank - %d name host - %s\n",rankP, nameHost);
 
   double* u = NULL, *u_chunk = NULL, *un_chunk = NULL;
   int NX, NY, NZ, NYr, NZr;
@@ -223,7 +224,7 @@ int main(int argc, char **argv) {
 
   if (rankP == ROOT) {
     printf("START!\n");
-    t0 = omp_get_wtime();
+    t0 = MPI_Wtime();
   }
 
   // ОСНОВНЫЕ ВЫЧИСЛЕНИЯ
@@ -273,7 +274,7 @@ int main(int argc, char **argv) {
   //  *******************
   if (rankP == ROOT) {
     printf("FINISH!\n");
-    t1 = omp_get_wtime();
+    t1 = MPI_Wtime();
   }
 
   //  GATHER

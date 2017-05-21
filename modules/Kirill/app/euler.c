@@ -23,8 +23,6 @@
 
 const char pathSetting[] = "../../../../initial/setting3.ini";
 const char pathFunction[] = "../../../../initial/function3.txt";
-
-const char pathResult1D[] = "../../../../result/Kirill/euler1D_3.txt";
 const char pathResult3D[] = "../../../../result/Kirill/euler3D_3.txt";
 
 //const char pathSetting[] = "setting3.ini";
@@ -34,11 +32,6 @@ const char pathResult3D[] = "../../../../result/Kirill/euler3D_3.txt";
 int main(int argc, char **argv) {
   int sizeP, rankP;
 
-  const size_t len=80;
-  char name[len];
-  gethostname(name, len);
-
-  printf("Name host - %s\n", name);
   size_t sizeTime;
 
   MPI_Status status[4];
@@ -50,7 +43,11 @@ int main(int argc, char **argv) {
 
   MPI_Comm_size(MPI_COMM_WORLD, &sizeP);
   MPI_Comm_rank(MPI_COMM_WORLD, &rankP);
-  if (rankP == ROOT) printf("MPI RUN ON %d PROCESS\n", sizeP);
+
+  const size_t len=80;
+  char nameHost[len];
+  gethostname(nameHost, len);
+  printf("rank - %d name host - %s\n",rankP, nameHost);
 
   SpMatrix mat;
   size_t dim;
@@ -150,21 +147,21 @@ int main(int argc, char **argv) {
 
   if (rankP == ROOT) {
     printf("START!\n");
-    t0 = omp_get_wtime();
+    t0 = MPI_Wtime();
   }
 
   // Создание типа плоскости XY и XZ
   MPI_Datatype planeXY;
-  MPI_Type_vector(NZr+2, NX, NX*(NYr+2), MPI_DOUBLE, &planeXY);
+  MPI_Type_vector(NZr+RESERVE, NX, NX*(NYr+RESERVE), MPI_DOUBLE, &planeXY);
   MPI_Type_commit(&planeXY);
 
   MPI_Datatype planeXZ;
-  MPI_Type_contiguous(NX*(NYr+2), MPI_DOUBLE, &planeXZ);
+  MPI_Type_contiguous(NX*(NYr+RESERVE), MPI_DOUBLE, &planeXZ);
   MPI_Type_commit(&planeXZ);
   // *****************************
 
-  for (int z = 0; z < NZr+2; z++) {
-    for (int y = 0; y < NYr+2; y++) {
+  for (int z = 0; z < NZr+RESERVE; z++) {
+    for (int y = 0; y < NYr+RESERVE; y++) {
       for (int x = 0; x < NX; x++) {
         if (x==0)
           u_chunk[IND(x,y,z)]=u_chunk[IND(x+1,y,z)];
@@ -214,7 +211,7 @@ int main(int argc, char **argv) {
 
   if (rankP == ROOT) {
     printf("FINISH!\n\n");
-    t1 = omp_get_wtime();
+    t1 = MPI_Wtime();
   }
 
   //        GATHER
