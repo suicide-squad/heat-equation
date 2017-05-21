@@ -13,7 +13,6 @@
 
 const char pathSetting[] = "../../../../initial/setting3.ini";
 const char pathFunction[] = "../../../../initial/function3.txt";
-
 const char pathResult3D[] = "../../../../result/Kirill/implicit3D_3.txt";
 
 //const char pathSetting[] = "setting3.ini";
@@ -43,8 +42,6 @@ int main() {
   int error;
   int NX, NY, NZ;
 
-  omp_set_num_threads(2);
-
   error = readSetting(pathSetting, &setting);
 
   if (error != OK) return error;
@@ -64,7 +61,8 @@ int main() {
 
   #if ENABLE_PARALLEL
     printf("PARALLEL VERSION!\n");
-  #endif
+    omp_set_num_threads(1);
+#endif
   printf("TimeSize -\t%lu\n", sizeTime);
 
   double dx = fabs(setting.XSTART - setting.XEND) / setting.NX;
