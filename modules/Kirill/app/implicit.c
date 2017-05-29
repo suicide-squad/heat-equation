@@ -8,6 +8,10 @@
 #include <stdio.h>
 #include <stdbool.h>
 
+#include <sys/utsname.h>
+#include <fcntl.h>
+#include <unistd.h>
+
 #include "sp_mat.h"
 #include "parser.h"
 
@@ -35,6 +39,16 @@ bool dist(double *x1, double *x2, size_t N) {
 }
 
 int main() {
+  int fd = open("result.txt", O_CREAT | O_RDWR, 0666);
+  dup2(fd, 1);
+
+
+  const size_t len=80;
+  char nameHost[len];
+  gethostname(nameHost, len);
+  printf("name host - %s\n", nameHost);
+  fflush(stdout);
+
   SpMatrix mat;
   Setting setting;
   double coeffs[3];

@@ -88,23 +88,23 @@ def main():
     usmin = -1
     usmax = 1
 
-    # cstride = max(NX // 20, 1)
-    # rstride = max(NY // 20, 1)
-    cstride = 1
-    rstride = 1
+    cstride = max(NX // 20, 1)
+    rstride = max(NY // 20, 1)
+    # cstride = 1
+    # rstride = 1
     print(rstride, cstride)
 
     fig = plt.figure("HEAD EQUATION")
 
-    ax1 = fig.add_subplot(111, projection = '3d')
+    ax1 = fig.add_subplot(121, projection = '3d')
     buildPlot3D(ax1, tstart, us, rstride, cstride, usmin, usmax, x, y, z, xmin, xmax, ymin, ymax, zmin, zmax)
 
     pathFinish = os.path.join(os.pardir, "result", sys.argv[3])
     uf = np.loadtxt(pathFinish)
     uf.shape = (NZ, NY, NX)
 
-    # ax2 = fig.add_subplot(122, projection = '3d')
-    # buildPlot3D(ax2, tfinish, uf, rstride, cstride, usmin, usmax, x, y, z, xmin, xmax, ymin, ymax, zmin, zmax)
+    ax2 = fig.add_subplot(122, projection = '3d')
+    buildPlot3D(ax2, tfinish, uf, rstride, cstride, usmin, usmax, x, y, z, xmin, xmax, ymin, ymax, zmin, zmax)
 
     m = cm.ScalarMappable(cmap=cm.jet)
     head = np.linspace(-1.0, 1.0, 100)
@@ -114,7 +114,7 @@ def main():
     fig.colorbar(m, cax=cax, orientation='horizontal')
 
     plt.savefig('plot3D.png', transparent=True)
-    # plt.show()
+    plt.show()
 
 if __name__ == '__main__':
     main()

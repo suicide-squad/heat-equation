@@ -145,11 +145,6 @@ int main(int argc, char **argv) {
 
 //   printf("rank - %d; left %d; right %d; top %d; down %d\n", rankP, rank_left, rank_right, rank_top, rank_down);
 
-  if (rankP == ROOT) {
-    printf("START!\n");
-    t0 = MPI_Wtime();
-  }
-
   // Создание типа плоскости XY и XZ
   MPI_Datatype planeXY;
   MPI_Type_vector(NZr+RESERVE, NX, NX*(NYr+RESERVE), MPI_DOUBLE, &planeXY);
@@ -179,6 +174,10 @@ int main(int argc, char **argv) {
     }
   }
 
+  if (rankP == ROOT) {
+    printf("START!\n");
+    t0 = MPI_Wtime();
+  }
 
   // ОСНОВНЫЕ ВЫЧИСЛЕНИЯ
   for (int t = 1; t <= sizeTime; t++) {
