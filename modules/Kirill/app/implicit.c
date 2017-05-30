@@ -148,6 +148,7 @@ int main() {
 
   double t1 = omp_get_wtime();
   double diffTime = t1 - t0;
+  printf("Count Iteration -\t%d\n", countIter);
   printf("Time -\t%.3lf\n", diffTime);
   writeFunction3D(pathResult3D, u, NX, NY, NZ, SHIFT);
 
