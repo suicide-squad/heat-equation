@@ -36,7 +36,7 @@ int readFunction(const char* path, double* u, int nx, int ny, int nz, int shift)
 
   for (int z = shift; z < nz - shift; z++)
     for (int y = shift; y < ny - shift; y++)
-      for (int x = 1; x < nx-1; x++)
+      for (int x = shift; x < nx - shift; x++)
         if (!fscanf(fp, "%lf\n", &u[x + y*nx + z*nx*ny]))
           return READING_ERROR;
 
@@ -59,7 +59,7 @@ void writeFunction3D(const char* path, double* u, int nx, int ny, int nz, int sh
 
   for (int z = shift; z < nz-shift; z++)
     for (int y = shift; y < ny-shift; y++)
-      for (int x = 1; x < nx-1; x++)
+      for (int x = shift; x < nx-shift; x++)
         fprintf(fp, "%.15le\n", u[x + y*nx + z*nx*ny]);
   fclose(fp);
 }

@@ -7,6 +7,8 @@
 #include <stdlib.h>
 #include <mpi.h>
 
+#include <sys/utsname.h>
+
 #include "sp_mat.h"
 #include "parser.h"
 #include "sgpu.h"
@@ -18,10 +20,13 @@
 
 #define IND(x,y,z) ((x) + (y)*NX + (z)*NX*(NYr + RESERVE))
 
-const char pathSetting[] = "../../../../initial/setting2.ini";
-const char pathFunction[] = "../../../../initial/function2.txt";
-const char pathResult[] = "../../../../result/Kirill/tmp1D.txt";
-const char pathResult3D[] = "../../../../result/Kirill/tmp3D.txt";
+const char pathSetting[] = "../../../../initial/setting3.ini";
+const char pathFunction[] = "../../../../initial/function3.txt";
+const char pathResult3D[] = "../../../../result/Kirill/runge3D_3.txt";
+
+//const char pathSetting[] = "setting3.ini";
+//const char pathFunction[] = "function3.txt";
+//const char pathResult3D[] = "res.txt";
 
 int main(int argc, char **argv) {
   int sizeP, rankP;
@@ -38,7 +43,11 @@ int main(int argc, char **argv) {
 
   MPI_Comm_size(MPI_COMM_WORLD, &sizeP);
   MPI_Comm_rank(MPI_COMM_WORLD, &rankP);
-  if (rankP == ROOT) printf("MPI RUN ON %d PROCESS\n", sizeP);
+
+  const size_t len=80;
+  char nameHost[len];
+  gethostname(nameHost, len);
+  printf("rank - %d name host - %s\n",rankP, nameHost);
 
   double* u = NULL, *u_chunk = NULL, *un_chunk = NULL;
   int NX, NY, NZ, NYr, NZr;
@@ -48,7 +57,7 @@ int main(int argc, char **argv) {
     int error = readSetting(pathSetting, &setting);
     if (error != OK) return error;
 
-    NX = (setting.NX + 2);
+    NX = (setting.NX + RESERVE);
     NY = (setting.NY + RESERVE);
     NZ = (setting.NZ + RESERVE);
 
@@ -62,6 +71,7 @@ int main(int argc, char **argv) {
 
     #if ENABLE_PARALLEL
       printf("PARALLEL VERSION!\n");
+      omp_set_num_threads(2);
     #endif
     printf("TimeSize -\t%lu\n", sizeTime);
 
@@ -100,7 +110,7 @@ int main(int argc, char **argv) {
   //  размер каждой размерности
   dims[0] = blockZP; dims[1] = blockYP;
   //  наличие циклов в каждой размерности
-  periods[0] = 1; periods[1] = 1;
+  periods[0] = 0; periods[1] = 0;
   //  разрешение системе менять номера процессов
   int reorder = 0;
   MPI_Cart_create(MPI_COMM_WORLD, DIM_CART, dims, periods, reorder, &gridComm);
@@ -119,7 +129,7 @@ int main(int argc, char **argv) {
   size_t nonZero = dimChunk*7;
 
   initSpMat(&A, nonZero, dimChunk);
-  createExplicitSpMatV2(&A, coeffs, NX, NYr + RESERVE, NZr + RESERVE);
+  createExplicitSpMatV2R(&A, coeffs, NX, NYr + RESERVE, NZr + RESERVE, gridComm);
 
   coeffs[1] = dt*coeffs[1]*0.5;
   coeffs[2] = dt*coeffs[2]*0.5;
@@ -127,7 +137,7 @@ int main(int argc, char **argv) {
   coeffs[0] = 1.0 - 2.0*(coeffs[1] + coeffs[2] + coeffs[3]);
 
   initSpMat(&B, nonZero, dimChunk);
-  createExplicitSpMatV2(&B, coeffs, NX, NYr + RESERVE, NZr + RESERVE);
+  createExplicitSpMatV2R(&B, coeffs, NX, NYr + RESERVE, NZr + RESERVE, gridComm);
 
   coeffs[1] = coeffs[1]*2.0;
   coeffs[2] = coeffs[2]*2.0;
@@ -135,7 +145,7 @@ int main(int argc, char **argv) {
   coeffs[0] = 1.0 - 2.0*(coeffs[1] + coeffs[2] + coeffs[3]);
 
   initSpMat(&C, nonZero, dimChunk);
-  createExplicitSpMatV2(&C, coeffs, NX, NYr + RESERVE, NZr + RESERVE);
+  createExplicitSpMatV2R(&C, coeffs, NX, NYr + RESERVE, NZr + RESERVE, gridComm);
 
   //  printSpMat(A);
 
@@ -146,13 +156,56 @@ int main(int argc, char **argv) {
   double h = dt/6.0;
   double *tmp;
 
+  for (int z = 0; z < NZr + RESERVE; z++) {
+    for (int y = 0; y < NYr + RESERVE; y++) {
+      for (int x = 0; x < NX; x++) {
+        if (x == SHIFT - 1) {
+          u_chunk[IND(x, y, z)] = u_chunk[IND(x + 1, y, z)];
+          u_chunk[IND(x-1, y, z)] = u_chunk[IND(x, y, z)];
+          u_chunk[IND(x-2, y, z)] = u_chunk[IND(x-1, y, z)];
+          u_chunk[IND(x-3, y, z)] = u_chunk[IND(x-2, y, z)];
+        }
+        if (x == NX - SHIFT ) {
+          u_chunk[IND(x, y, z)] = u_chunk[IND(x -1, y, z)];
+          u_chunk[IND(x+1, y, z)] = u_chunk[IND(x, y, z)];
+          u_chunk[IND(x+2, y, z)] = u_chunk[IND(x+1, y, z)];
+          u_chunk[IND(x+3, y, z)] = u_chunk[IND(x+2, y, z)];
+        }
+        if (y == SHIFT  - 1) {
+          u_chunk[IND(x, y, z)] = u_chunk[IND(x, y + 1, z)];
+          u_chunk[IND(x, y-1, z)] = u_chunk[IND(x, y, z)];
+          u_chunk[IND(x, y-2, z)] = u_chunk[IND(x, y - 1, z)];
+          u_chunk[IND(x, y-3, z)] = u_chunk[IND(x, y - 2, z)];
+        }
+        if (y == NYr + SHIFT ) {
+          u_chunk[IND(x, y, z)] = u_chunk[IND(x, y - 1, z)];
+          u_chunk[IND(x, y + 1, z)] = u_chunk[IND(x, y, z)];
+          u_chunk[IND(x, y + 2, z)] = u_chunk[IND(x, y + 1, z)];
+          u_chunk[IND(x, y + 3, z)] = u_chunk[IND(x, y + 2, z)];
+        }
+        if (z == SHIFT - 1) {
+          u_chunk[IND(x, y, z)] = u_chunk[IND(x, y, z + 1)];
+          u_chunk[IND(x, y, z - 1)] = u_chunk[IND(x, y, z)];
+          u_chunk[IND(x, y, z - 2)] = u_chunk[IND(x, y, z - 1)];
+          u_chunk[IND(x, y, z - 3)] = u_chunk[IND(x, y, z - 2)];
+        }
+        if (z == NZr + SHIFT ) {
+          u_chunk[IND(x, y, z)] = u_chunk[IND(x, y, z - 1)];
+          u_chunk[IND(x, y, z+1)] = u_chunk[IND(x, y, z)];
+          u_chunk[IND(x, y, z+2)] = u_chunk[IND(x, y, z + 1)];
+          u_chunk[IND(x, y, z+3)] = u_chunk[IND(x, y, z + 2)];
+        }
+      }
+    }
+  }
+
   // Определения соседних ранков в декардовой решётке
   int rank_left, rank_right, rank_down, rank_top;
-  MPI_Cart_shift(gridComm, 1, 1, &rank_left, &rank_right);
+  MPI_Cart_shift(gridComm, 1, -1, &rank_left, &rank_right);
   MPI_Cart_shift(gridComm, 0, 1, &rank_down, &rank_top);
   // *************************
 
-// printf("rank - %d; left %d; right %d; top %d; down %d\n", rankP, rank_left, rank_right, rank_top, rank_down);
+ printf("rank - %d; left %d; right %d; top %d; down %d\n", rankP, rank_left, rank_right, rank_top, rank_down);
 
   // Создание типа плоскости XY и XZ
 
@@ -171,7 +224,7 @@ int main(int argc, char **argv) {
 
   if (rankP == ROOT) {
     printf("START!\n");
-    t0 = omp_get_wtime();
+    t0 = MPI_Wtime();
   }
 
   // ОСНОВНЫЕ ВЫЧИСЛЕНИЯ
@@ -181,6 +234,7 @@ int main(int argc, char **argv) {
     MPI_Sendrecv(&u_chunk[IND(0, NYr, 0)],  1, planeXY, rank_left, 0,
                  &u_chunk[IND(0, 0, 0)], 1, planeXY, rank_right, 0,
                  gridComm, &status[0]);
+
 
     //    Передача вправо по Y
     MPI_Sendrecv(&u_chunk[IND(0, SHIFT, 0)], 1, planeXY, rank_right, 1,
@@ -220,7 +274,7 @@ int main(int argc, char **argv) {
   //  *******************
   if (rankP == ROOT) {
     printf("FINISH!\n");
-    t1 = omp_get_wtime();
+    t1 = MPI_Wtime();
   }
 
   //  GATHER
@@ -229,7 +283,7 @@ int main(int argc, char **argv) {
   if (rankP == ROOT) {
     double diffTime = t1 - t0;
     printf("Time -\t%.3lf\n", diffTime);
-    writeFunction1D(pathResult, u, NX, NY, 10, 10);
+//    writeFunction1D(pathResult, u, NX, NY, 10, 10);
     writeFunction3D(pathResult3D, u, NX, NY, NZ, SHIFT);
     free(u);
   }
