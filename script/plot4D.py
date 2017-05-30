@@ -40,11 +40,11 @@ def buildPlot3D(ax, title, u, rstride, cstride, usmin, usmax,
                                rstride=rstride, cstride=cstride, linewidth=linewidth,
                     antialiased=antialiased, shade=shade)
 
-    plt.title(title)
+    # plt.title(title)
 
-    ax.set_xlim(xmin + 1, xmax - 1)
-    ax.set_ylim(ymin + 1, ymax - 1)
-    ax.set_zlim(zmin + 1, zmax - 1)
+    # ax.set_xlim(xmin + 1, xmax - 1)
+    # ax.set_ylim(ymin + 1, ymax - 1)
+    # ax.set_zlim(zmin + 1, zmax - 1)
 
 
     ax.set_xlabel('X')
@@ -85,11 +85,13 @@ def main():
     us = np.loadtxt(pathStart)
     us.shape = (NZ, NY, NX)
 
-    usmin = us.min()
-    usmax = us.max()
+    usmin = -1
+    usmax = 1
 
     cstride = max(NX // 20, 1)
     rstride = max(NY // 20, 1)
+    # cstride = 1
+    # rstride = 1
     print(rstride, cstride)
 
     fig = plt.figure("HEAD EQUATION")
@@ -105,11 +107,13 @@ def main():
     buildPlot3D(ax2, tfinish, uf, rstride, cstride, usmin, usmax, x, y, z, xmin, xmax, ymin, ymax, zmin, zmax)
 
     m = cm.ScalarMappable(cmap=cm.jet)
-    m.set_array(us[:][:][0])
+    head = np.linspace(-1.0, 1.0, 100)
+    m.set_array(head)
 
     cax = fig.add_axes([0.12, 0.05, 0.78, 0.02])
     fig.colorbar(m, cax=cax, orientation='horizontal')
 
+    plt.savefig('plot3D.png', transparent=True)
     plt.show()
 
 if __name__ == '__main__':
