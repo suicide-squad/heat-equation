@@ -100,34 +100,35 @@ int main() {
 
   int countIter = 0;
 
-  double k = 1.0/(1.0 + 2.0*setting.SIGMA*setting.dt*(1.0/(dx*dx) + 1.0/(dy*dy) + 1.0/(dz*dz)));
-
-  // ОСНОВНЫЕ ВЫЧИСЛЕНИЯ
-
   double t0 = omp_get_wtime();
+
+  // ОСНОВНЫЕ ВЫЧИСЛЕНИЯ ЭЙЛЕРА (НЕЯВНАЯ СХЕМА) ПО ВРЕМЕНИ
+  // *****************************
+  double k = 1.0/(1.0 + 2.0*setting.SIGMA*setting.dt*(1.0/(dx*dx) + 1.0/(dy*dy) + 1.0/(dz*dz)));
   for (int t = 1; t <= sizeTime; t++) {
     memcpy(x1, u, dim*sizeof(double));
 
     do {
       multMV(&x2, mat, x1);
 
-
       for (int z = 1; z < NZ-1; z++) {
         for (int y = 1; y < NY-1; y++) {
           for (int x = 1; x < NX-1; x++) {
-            x2[IND(x,y,z)] = (u[IND(x,y,z)] + x2[IND(x,y,z)]) * k;
-            if (x==1)
-              x2[IND(x-1,y,z)]=x2[IND(x,y,z)];
-            if (x==NX-2)
-              x2[IND(x+1,y,z)]=x2[IND(x,y,z)];
-            if (y==1)
-              x2[IND(x,y-1,z)]=x2[IND(x,y,z)];
-            if (y==NY-2)
-              x2[IND(x,y+1,z)]=x2[IND(x,y,z)];
-            if (z==1)
-              x2[IND(x,y,z-1)]=x2[IND(x,y,z)];
-            if (z==NZ-2)
-              x2[IND(x,y,z+1)]=x2[IND(x,y,z)];
+            // Основая итерационная формула Якоби
+            x2[IND(x, y, z)] = (u[IND(x, y, z)] + x2[IND(x, y, z)]) * k;
+            //  Заполнение границ
+            if (x == 1)
+              x2[IND(x-1,y,z)] = x2[IND(x,y,z)];
+            if (x == NX-2)
+              x2[IND(x+1,y,z)] = x2[IND(x,y,z)];
+            if (y ==1)
+              x2[IND(x,y-1,z)] = x2[IND(x,y,z)];
+            if (y == NY-2)
+              x2[IND(x,y+1,z)] = x2[IND(x,y,z)];
+            if (z == 1)
+              x2[IND(x,y,z-1)] = x2[IND(x,y,z)];
+            if (z == NZ-2)
+              x2[IND(x,y,z+1)] = x2[IND(x,y,z)];
           }
         }
       }
@@ -141,10 +142,8 @@ int main() {
     } while (!dist(x1, x2, dim));
 
     memcpy(u, x1, dim*sizeof(double));
-
   }
-
-  //  *******************
+  // *****************************
 
   double t1 = omp_get_wtime();
   double diffTime = t1 - t0;

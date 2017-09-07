@@ -153,7 +153,6 @@ int main(int argc, char **argv) {
   MPI_Datatype planeXZ;
   MPI_Type_contiguous(NX*(NYr+RESERVE), MPI_DOUBLE, &planeXZ);
   MPI_Type_commit(&planeXZ);
-  // *****************************
 
   for (int z = 0; z < NZr+RESERVE; z++) {
     for (int y = 0; y < NYr+RESERVE; y++) {
@@ -179,32 +178,39 @@ int main(int argc, char **argv) {
     t0 = MPI_Wtime();
   }
 
-  // ОСНОВНЫЕ ВЫЧИСЛЕНИЯ
+  // ОСНОВНЫЕ ВЫЧИСЛЕНИЯ ЭЙЛЕРА (ЯВНАЯ СХЕМА) ПО ВРЕМЕНИ
+  // *****************************
   for (int t = 1; t <= sizeTime; t++) {
     //  ОБМЕН ГРАНИЦ ПО Y И Z
 
     //    Передача влево по Y
     MPI_Sendrecv(&u_chunk[IND(0, NYr, 0)],  1, planeXY, rank_left, 0,
-                 &u_chunk[IND(0, 0, 0)], 1, planeXY, rank_right, 0, gridComm, &status[0]);
+                 &u_chunk[IND(0, 0, 0)], 1, planeXY, rank_right, 0,
+                 gridComm, &status[0]);
 
-    //    Передача вправо по Y
+    //   Передача вправо по Y
     MPI_Sendrecv(&u_chunk[IND(0, 1, 0)], 1, planeXY, rank_right, 1,
-                 &u_chunk[IND(0, NYr+1, 0)],  1, planeXY, rank_left, 1, gridComm, &status[1]);
+                 &u_chunk[IND(0, NYr+1, 0)],  1, planeXY, rank_left, 1,
+                 gridComm, &status[1]);
 
     //    Передача вниз по Z
     MPI_Sendrecv(&u_chunk[IND(0, 0, 1)], 1, planeXZ, rank_down, 2,
-                 &u_chunk[IND(0, 0, NZr+1)],  1, planeXZ, rank_top, 2, gridComm, &status[2]);
+                 &u_chunk[IND(0, 0, NZr+1)],  1, planeXZ, rank_top, 2,
+                 gridComm, &status[2]);
 
     //    Передача вверх по Z
     MPI_Sendrecv(&u_chunk[IND(0, 0, NZr)], 1, planeXZ, rank_top, 3,
-                 &u_chunk[IND(0, 0, 0)], 1, planeXZ, rank_down, 3, gridComm, &status[3]);
+                 &u_chunk[IND(0, 0, 0)], 1, planeXZ, rank_down, 3,
+                 gridComm, &status[3]);
 
+
+    //  Векторно-матричное умножение матрицы коэффицентов
+    //  на предыдущий момент времени
     multMV(&un_chunk, mat, u_chunk);
 
     tmp = u_chunk;
     u_chunk = un_chunk;
     un_chunk = tmp;
-
   }
   //  *******************
 
