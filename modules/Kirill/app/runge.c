@@ -227,7 +227,8 @@ int main(int argc, char **argv) {
     t0 = MPI_Wtime();
   }
 
-  // ОСНОВНЫЕ ВЫЧИСЛЕНИЯ
+  // ОСНОВНЫЕ ВЫЧИСЛЕНИЯ РУНГЕ-КУТТА (ЯВНАЯ СХЕМА) ПО ВРЕМЕНИ
+  // *****************************
   for (int t = 1; t <= sizeTime; t++) {
 
     //    Передача влево по Y
@@ -270,8 +271,8 @@ int main(int argc, char **argv) {
     u_chunk = un_chunk;
     un_chunk = tmp;
   }
+  // *****************************
 
-  //  *******************
   if (rankP == ROOT) {
     printf("FINISH!\n");
     t1 = MPI_Wtime();

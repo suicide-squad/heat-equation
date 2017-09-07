@@ -149,6 +149,7 @@ void createExplicitSpMat(SpMatrix *mat, TYPE coeffs[4], int dim, int NX, int NXY
   }
 }
 
+//  Заполнение матрицы для метода Эйлера (явная схема)
 void createExplicitSpMatV2(SpMatrix *mat, TYPE coeffs[4], int nx, int ny, int nz) {
   int index = 0, k = 0;
   int shiftIndexX, shiftIndexY, shiftIndexZ;
@@ -157,28 +158,34 @@ void createExplicitSpMatV2(SpMatrix *mat, TYPE coeffs[4], int nx, int ny, int nz
 
   int realIndex;
   for (int z = 0; z < nz; z++) {
+    // Определение индекса граничных условий смещения по z
     if (z == 0)
       shiftIndexZ = nx*ny;
     else if (z == nz - 1)
       shiftIndexZ = -nx*ny;
     else
       shiftIndexZ = 0;
+    // ---
     for (int y = 0; y < ny; y++) {
+      // Определение индекса граничных условий смещения по y
       if (y == 0)
         shiftIndexY = nx;
       else if (y == ny - 1)
         shiftIndexY = -nx;
       else
         shiftIndexY = 0;
-
+      // ---
       for (int x = 0; x < nx; x++) {
+        // Определение индекса граничных условий смещения по y
         if (x == 0)
           shiftIndexX = 1;
         else if (x == nx - 1)
           shiftIndexX = -1;
         else
           shiftIndexX = 0;
+        // ---
 
+        // Итоговое смещение и вычисление индекса
         shift = shiftIndexZ + shiftIndexY + shiftIndexX;
         realIndex = x + y*nx + z*nx*ny + shift;
 
@@ -203,7 +210,7 @@ void createExplicitSpMatV2(SpMatrix *mat, TYPE coeffs[4], int nx, int ny, int nz
         mat->value[index] = coeffs[1];
         index++;
 
-// Отсутствие смещения
+        // Отсутствие смещения
         mat->col[index] = realIndex;
         mat->value[index] = coeffs[0];
         index++;
