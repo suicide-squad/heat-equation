@@ -12,8 +12,8 @@
 #include "sp_mat.h"
 #include "parser.h"
 #include "sgpu.h"
+#include "ts.h"
 
-#define ROOT 0
 #define DIM_CART 2
 #define SHIFT 4
 #define RESERVE SHIFT*2
@@ -34,7 +34,7 @@ int main(int argc, char **argv) {
   double t1 = 0.0, t0 = 0.0;
   SpMatrix A, B, C;
   Setting setting;
-  double coeffs[4];
+  TYPE coeffs[4];
   double dt;
   MPI_Status status[4];
   int blockYP = 0, blockZP = 0;
@@ -49,7 +49,7 @@ int main(int argc, char **argv) {
   gethostname(nameHost, len);
   printf("rank - %d name host - %s\n",rankP, nameHost);
 
-  double* u = NULL, *u_chunk = NULL, *un_chunk = NULL;
+  TYPE * u = NULL, *u_chunk = NULL, *un_chunk = NULL;
   int NX, NY, NZ, NYr, NZr;
 
   if (rankP == ROOT) {
@@ -61,8 +61,8 @@ int main(int argc, char **argv) {
     NY = (setting.NY + RESERVE);
     NZ = (setting.NZ + RESERVE);
 
-    size_t dim = (size_t) NX*NY*NZ;
-    u = (double*) calloc(dim, sizeof(double));
+    int dim = NX*NY*NZ;
+    u = (TYPE *) calloc(dim, sizeof(TYPE));
     error = readFunction(pathFunction, u, NX, NY, NZ, SHIFT);
 
     if (error != OK) return error;
@@ -88,8 +88,8 @@ int main(int argc, char **argv) {
   }
 
   MPI_Bcast(&sizeTime, 1, MPI_UNSIGNED_LONG, ROOT, MPI_COMM_WORLD);
-  MPI_Bcast(coeffs, 4, MPI_DOUBLE, ROOT, MPI_COMM_WORLD);
-  MPI_Bcast(&dt, 1, MPI_DOUBLE, ROOT, MPI_COMM_WORLD);
+  MPI_Bcast(coeffs, 4, MPI_TYPE, ROOT, MPI_COMM_WORLD);
+  MPI_Bcast(&dt, 1, MPI_TYPE, ROOT, MPI_COMM_WORLD);
   MPI_Bcast(&NX, 1, MPI_INT, ROOT, MPI_COMM_WORLD);
   MPI_Bcast(&NY, 1, MPI_INT, ROOT, MPI_COMM_WORLD);
   MPI_Bcast(&NZ, 1, MPI_INT, ROOT, MPI_COMM_WORLD);
@@ -118,15 +118,15 @@ int main(int argc, char **argv) {
   // Определение координат процесса в решетке
   MPI_Cart_coords(gridComm, rankP, DIM_CART, gridCoords);
 
-  size_t dimChunk = (size_t)NX*(NYr + RESERVE)*(NZr + RESERVE);
-  u_chunk = (double *)malloc(sizeof(double)*dimChunk);
-  un_chunk = (double *)malloc(sizeof(double)*dimChunk);
+  int dimChunk = NX*(NYr + RESERVE)*(NZr + RESERVE);
+  u_chunk = (TYPE *)malloc(sizeof(TYPE)*dimChunk);
+  un_chunk = (TYPE *)malloc(sizeof(TYPE)*dimChunk);
 
   //  SCATTER
   scatter_by_block(u, u_chunk, NX, NY, NYr, NZr, gridComm, RESERVE);
   if (rankP == ROOT) printf("Scatter!\n");
 
-  size_t nonZero = dimChunk*7;
+  int nonZero = dimChunk*7;
 
   initSpMat(&A, nonZero, dimChunk);
   createExplicitSpMatV2R(&A, coeffs, NX, NYr + RESERVE, NZr + RESERVE, gridComm);
@@ -149,12 +149,12 @@ int main(int argc, char **argv) {
 
   //  printSpMat(A);
 
-  double* k1 = (double*)malloc(sizeof(double)*dimChunk);
-  double* k2 = (double*)malloc(sizeof(double)*dimChunk);
-  double* k3 = (double*)malloc(sizeof(double)*dimChunk);
-  double* k4 = (double*)malloc(sizeof(double)*dimChunk);
-  double h = dt/6.0;
-  double *tmp;
+  TYPE* k1 = (TYPE*)malloc(sizeof(TYPE)*dimChunk);
+  TYPE* k2 = (TYPE*)malloc(sizeof(TYPE)*dimChunk);
+  TYPE* k3 = (TYPE*)malloc(sizeof(TYPE)*dimChunk);
+  TYPE* k4 = (TYPE*)malloc(sizeof(TYPE)*dimChunk);
+  TYPE h = dt/6.0;
+  TYPE *tmp;
 
   for (int z = 0; z < NZr + RESERVE; z++) {
     for (int y = 0; y < NYr + RESERVE; y++) {
@@ -214,11 +214,11 @@ int main(int argc, char **argv) {
 
   //  Каждая плоскость представляет SHIFT подряд идущих плоскостей
   MPI_Datatype planeXY;
-  MPI_Type_vector(NZr+RESERVE, NX*SHIFT, NX*(NYr+RESERVE), MPI_DOUBLE, &planeXY);
+  MPI_Type_vector(NZr+RESERVE, NX*SHIFT, NX*(NYr+RESERVE), MPI_TYPE, &planeXY);
   MPI_Type_commit(&planeXY);
 
   MPI_Datatype planeXZ;
-  MPI_Type_contiguous(NX*SHIFT*(NYr+RESERVE), MPI_DOUBLE, &planeXZ);
+  MPI_Type_contiguous(NX*SHIFT*(NYr+RESERVE), MPI_TYPE, &planeXZ);
   MPI_Type_commit(&planeXZ);
   // *****************************
 
@@ -252,16 +252,16 @@ int main(int argc, char **argv) {
                  gridComm, &status[3]);
 
     // k1 = A*U
-    multMV(&k1, A, u_chunk);
+    multMV(k1, A, u_chunk);
 
     // k2 = B*k1
-    multMV(&k2, B, k1);
+    multMV(k2, B, k1);
 
     // k3 = B*k2
-    multMV(&k3, B, k2);
+    multMV(k3, B, k2);
 
     // k4 = C*k3
-    multMV(&k4, C, k3);
+    multMV(k4, C, k3);
 
     // UNext = U + (k1 + k2*2 + k3*2 + k4)*h;
     sumV(&un_chunk, u_chunk, k1, k2, k3, k4, dimChunk, h);

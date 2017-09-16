@@ -14,6 +14,7 @@
 
 #include "sp_mat.h"
 #include "parser.h"
+#include "ts.h"
 
 const char pathSetting[] = "../../../../initial/setting3.ini";
 const char pathFunction[] = "../../../../initial/function3.txt";
@@ -31,7 +32,7 @@ const char pathResult3D[] = "../../../../result/Kirill/implicit3D_3.txt";
 
 #define IND(x,y,z) ((x) + (y)*NX + (z)*NX*NY)
 
-bool dist(double *x1, double *x2, size_t N) {
+bool dist(TYPE *x1, TYPE *x2, int N) {
   for (int i = 0; i < N; i++)
     if (fabs(x1[i] - x2[i]) > EPS)
       return false;
@@ -51,8 +52,8 @@ int main() {
 
   SpMatrix mat;
   Setting setting;
-  double coeffs[3];
-  double *u;
+  TYPE coeffs[3];
+  TYPE *u;
   int error;
   int NX, NY, NZ;
 
@@ -64,8 +65,8 @@ int main() {
   NY = setting.NY + RESERVE;
   NZ = setting.NZ + RESERVE;
 
-  size_t dim = (size_t)NX*NY*NZ;
-  u = (double *)calloc(dim, sizeof(double));
+  int dim = NX*NY*NZ;
+  u = (TYPE *)calloc(dim, sizeof(TYPE));
 
   error = readFunction(pathFunction, u, NX, NY, NZ, SHIFT);
 
@@ -79,37 +80,37 @@ int main() {
 #endif
   printf("TimeSize -\t%lu\n", sizeTime);
 
-  double dx = fabs(setting.XSTART - setting.XEND) / setting.NX;
-  double dy = fabs(setting.YSTART - setting.YEND) / setting.NY;
-  double dz = fabs(setting.ZSTART - setting.ZEND) / setting.NZ;
+  TYPE dx = fabs(setting.XSTART - setting.XEND) / setting.NX;
+  TYPE dy = fabs(setting.YSTART - setting.YEND) / setting.NY;
+  TYPE dz = fabs(setting.ZSTART - setting.ZEND) / setting.NZ;
 
   coeffs[0] = setting.dt*setting.SIGMA/(dx*dx);
   coeffs[1] = setting.dt*setting.SIGMA/(dy*dy);
   coeffs[2] = setting.dt*setting.SIGMA/(dz*dz);
 
-  size_t nonZero = (size_t)NX*NY*NZ*6;
+  int nonZero = NX*NY*NZ*6;
 
   initSpMat(&mat, nonZero, dim);
   createImplicitSpMat(&mat, coeffs, NX, NY, NZ);
 
 //  printSpMat(mat);
 
-  double *x1 = (double *) malloc(sizeof(double) * dim);
-  double *x2 = (double *) malloc(sizeof(double) * dim);
-  double *tmp;
+  TYPE *x1 = (TYPE *) malloc(sizeof(TYPE) * dim);
+  TYPE *x2 = (TYPE *) malloc(sizeof(TYPE) * dim);
+  TYPE *tmp;
 
   int countIter = 0;
 
-  double k = 1.0/(1.0 + 2.0*setting.SIGMA*setting.dt*(1.0/(dx*dx) + 1.0/(dy*dy) + 1.0/(dz*dz)));
+  TYPE k = 1.0/(1.0 + 2.0*setting.SIGMA*setting.dt*(1.0/(dx*dx) + 1.0/(dy*dy) + 1.0/(dz*dz)));
 
   // ОСНОВНЫЕ ВЫЧИСЛЕНИЯ
 
   double t0 = omp_get_wtime();
   for (int t = 1; t <= sizeTime; t++) {
-    memcpy(x1, u, dim*sizeof(double));
+    memcpy(x1, u, dim*sizeof(TYPE));
 
     do {
-      multMV(&x2, mat, x1);
+      multMV(x2, mat, x1);
 
 
       for (int z = 1; z < NZ-1; z++) {
@@ -140,7 +141,7 @@ int main() {
 
     } while (!dist(x1, x2, dim));
 
-    memcpy(u, x1, dim*sizeof(double));
+    memcpy(u, x1, dim*sizeof(TYPE));
 
   }
 

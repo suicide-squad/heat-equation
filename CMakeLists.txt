@@ -5,6 +5,8 @@ project(heat-equation)
 set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -std=c++11")
 set(CMAKE_C_FLAGS    "${CMAKE_C_FLAGS}   -std=c11")
 
+set(CMAKE_MODULE_PATH ${CMAKE_HOME_DIRECTORY}/cmake)
+
 find_package(OpenMP REQUIRED)
 if(OPENMP_FOUND)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  ${OpenMP_C_FLAGS}")
@@ -16,4 +18,8 @@ include_directories( ${MPI_INCLUDE_PATH} )
 
 find_library(M_LIB m)
 
+set(MKL_RUN TRUE)
+
 add_subdirectory(modules)
+
+
