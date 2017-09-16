@@ -29,7 +29,7 @@ int readSetting(const char *path, Setting *setting) {
   return OK;
 }
 
-int readFunction(const char* path, double* u, int nx, int ny, int nz, int shift) {
+int readFunction(const char *path, TYPE *u, int nx, int ny, int nz, int shift) {
   FILE *fp;
   if ( !(fp = fopen(path, "r")) )
     return NO_FILE;
@@ -43,7 +43,7 @@ int readFunction(const char* path, double* u, int nx, int ny, int nz, int shift)
   return OK;
 }
 
-void writeFunction1D(const char *path, double *u, int nx, int ny, int y, int z) {
+void writeFunction1D(const char *path, TYPE *u, int nx, int ny, int y, int z) {
   FILE *fp;
   fp = fopen(path, "w");
 
@@ -53,7 +53,7 @@ void writeFunction1D(const char *path, double *u, int nx, int ny, int y, int z) 
   fclose(fp);
 }
 
-void writeFunction3D(const char* path, double* u, int nx, int ny, int nz, int shift) {
+void writeFunction3D(const char *path, TYPE *u, int nx, int ny, int nz, int shift) {
   FILE *fp;
   fp = fopen(path, "w");
 
