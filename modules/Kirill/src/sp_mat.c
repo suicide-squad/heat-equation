@@ -1,18 +1,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sp_mat.h>
+
 #include <mpi.h>
 
 #include "sp_mat.h"
 
-void initSpMat(SpMatrix *mat, size_t nz, size_t nRows) {
+void initSpMat(SpMatrix *mat, int nz, int nRows) {
   mat->nz = nz;
   mat->nRows = nRows;
   mat->value = (TYPE *)malloc(sizeof(TYPE) * nz);
   mat->col = (int *)malloc(sizeof(int) * nz);
-  mat->rowIndex = (int *)malloc(sizeof(int) * (nRows) + 1);
-  memset(mat->rowIndex, 0, nRows + 1);
+  mat->rowIndex = (int *)calloc(nRows + 1, sizeof(int));
 }
 
 void freeSpMat(SpMatrix* mat) {
@@ -21,21 +20,31 @@ void freeSpMat(SpMatrix* mat) {
   free(mat->rowIndex);
 }
 
-void multMV(TYPE** result, SpMatrix mat, TYPE* vec) {
-  TYPE localSum;
-  #pragma omp parallel private(localSum) if (ENABLE_PARALLEL)
-  {
-    #pragma omp for nowait
-    for (int i = 0; i < mat.nRows; i++) {
-      localSum = 0.0;
-      for (int j = mat.rowIndex[i]; j < mat.rowIndex[i + 1]; j++)
-        localSum += mat.value[j] * vec[mat.col[j]];
-      (*result)[i] = localSum;
-    }
-  }
+# define multMV_default(result,mat, vec)                                      \
+  TYPE localSum;                                                              \
+  /*#pragma omp parallel private(localSum) if (ENABLE_PARALLEL)*/             \
+  {                                                                           \
+  /*#pragma omp for nowait*/                                                  \
+    for (int i = 0; i < mat.nRows; i++) {                                     \
+      localSum = 0.0;                                                         \
+      for (int j = mat.rowIndex[i]; j < mat.rowIndex[i + 1]; j++)             \
+        localSum += mat.value[j] * vec[mat.col[j]];                           \
+      result[i] = localSum;                                                   \
+    }                                                                         \
+  }                                                                           \
+
+# define multMV_mkl(result, mat, vec)                                                   \
+  mkl_cspblas_dcsrgemv("N", &mat.nRows, mat.value, mat.rowIndex, mat.col, vec, result); \
+
+void multMV(TYPE* result, SpMatrix mat, TYPE* vec) {
+#ifdef MKL_RUN
+  multMV_mkl(result, mat, vec);
+#else
+  multMV_default(result,mat, vec);
+#endif
 }
 
-void sumV(TYPE **result, TYPE *U, TYPE *k1, TYPE *k2, TYPE *k3, TYPE *k4, size_t N, double h) {
+void sumV(TYPE **result, TYPE *U, TYPE *k1, TYPE *k2, TYPE *k3, TYPE *k4, int N, double h) {
   #pragma omp parallel for if (ENABLE_PARALLEL)
   for (int i = 0; i < N; i++)
     (*result)[i] = U[i] + h*(k1[i] + 2.0*k2[i] + 2.0*k3[i] + k4[i]);
@@ -63,7 +72,7 @@ TYPE procedure(SpMatrix mat, int i, int j) {
   return result;
 }
 
-void denseMult(double **result, double **mat, double *vec, size_t dim) {
+void denseMult(double **result, double **mat, double *vec, int dim) {
   memset(*result, 0, dim*sizeof(double));
   for (int x = 0; x < dim; x++) {
     for (int i = 0;i < dim;i++)
