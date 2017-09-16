@@ -7,7 +7,7 @@
 
 #include "sgpu.h"
 
-void scatter_by_block(double* u, double* u_chunk, int nx, int ny, int nyr, int nzr, MPI_Comm gridComm, int reserve) {
+void scatter_by_block(TYPE* u, TYPE* u_chunk, int nx, int ny, int nyr, int nzr, MPI_Comm gridComm, int reserve) {
   int ndim = 0;
   MPI_Cartdim_get(gridComm, &ndim);
   int dims[ndim], periods[ndim], gridCoords[ndim];
@@ -21,24 +21,24 @@ void scatter_by_block(double* u, double* u_chunk, int nx, int ny, int nyr, int n
   remain_dims[0] = 1; remain_dims[1] = 0;
   MPI_Cart_sub(gridComm, remain_dims, &colComm);
 
-  double *u_z = NULL;
+  TYPE *u_z = NULL;
 
   if (gridCoords[1] == 0) {
-    u_z = (double *)malloc(sizeof(double)*nx*ny*(nzr+reserve));
-    MPI_Scatter(u + indRsrv*ny*nx, nx*ny*(nzr), MPI_DOUBLE, u_z + indRsrv*nx*ny, nx*ny*(nzr), MPI_DOUBLE, 0, colComm);
+    u_z = (TYPE *)malloc(sizeof(TYPE)*nx*ny*(nzr+reserve));
+    MPI_Scatter(u + indRsrv*ny*nx, nx*ny*(nzr), MPI_TYPE, u_z + indRsrv*nx*ny, nx*ny*(nzr), MPI_TYPE, 0, colComm);
   }
 
   remain_dims[0] = 0; remain_dims[1] = 1;
   MPI_Cart_sub(gridComm, remain_dims, &rowComm);
 
   for (int i = indRsrv; i < nzr + indRsrv; i++)
-    MPI_Scatter(u_z + indRsrv*nx + i*nx*ny, nx*(nyr), MPI_DOUBLE, u_chunk + indRsrv*nx + i*nx*(nyr+reserve), nx*nyr, MPI_DOUBLE, 0, rowComm);
+    MPI_Scatter(u_z + indRsrv*nx + i*nx*ny, nx*(nyr), MPI_TYPE, u_chunk + indRsrv*nx + i*nx*(nyr+reserve), nx*nyr, MPI_TYPE, 0, rowComm);
 
   if (gridCoords[1] == 0) free(u_z);
 }
 
 
-void gather_by_block(double* u, double* u_chunk, int nx, int ny, int nyr, int nzr, int reserve, MPI_Comm gridComm) {
+void gather_by_block(TYPE* u, TYPE* u_chunk, int nx, int ny, int nyr, int nzr, int reserve, MPI_Comm gridComm) {
   int indRsrv = reserve/2;
 
   int ndim = 0;
@@ -54,15 +54,15 @@ void gather_by_block(double* u, double* u_chunk, int nx, int ny, int nyr, int nz
   remain_dims[0] = 0; remain_dims[1] = 1;
   MPI_Cart_sub(gridComm, remain_dims, &rowComm);
 
-  double *u_z = NULL;
-  if (gridCoords[1] == 0) u_z = (double *)malloc(sizeof(double)*nx*ny*(nzr));
+  TYPE *u_z = NULL;
+  if (gridCoords[1] == 0) u_z = (TYPE *)malloc(sizeof(TYPE)*nx*ny*(nzr));
 
   for (int z = 0; z < nzr; z++)
     MPI_Gather(u_chunk + indRsrv*nx + (z+indRsrv)*nx*(nyr+reserve),
-               nx*(nyr), MPI_DOUBLE, u_z + indRsrv*nx + z*nx*ny, nx*(nyr), MPI_DOUBLE, 0, rowComm);
+               nx*(nyr), MPI_TYPE, u_z + indRsrv*nx + z*nx*ny, nx*(nyr), MPI_TYPE, 0, rowComm);
 
   if (gridCoords[1] == 0) {
-    MPI_Gather(u_z, nx*ny*(nzr), MPI_DOUBLE, u + indRsrv*ny*nx, nx*ny*(nzr), MPI_DOUBLE, 0, colComm);
+    MPI_Gather(u_z, nx*ny*(nzr), MPI_TYPE, u + indRsrv*ny*nx, nx*ny*(nzr), MPI_TYPE, 0, colComm);
     free(u_z);
   }
 }
