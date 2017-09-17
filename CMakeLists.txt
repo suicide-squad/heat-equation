@@ -18,7 +18,12 @@ include_directories( ${MPI_INCLUDE_PATH} )
 
 find_library(M_LIB m)
 
-set(MKL_RUN TRUE)
+find_package(AVX)
+# Set substitution variables for configuration file.
+if(AVX_FOUND)
+endif()
+
+set(MKL_RUN FALSE)
 
 add_subdirectory(modules)
 
