@@ -3,7 +3,6 @@
 //
 
 #include <stdio.h>
-#include <math.h>
 #include <stdlib.h>
 #include <mpi.h>
 #include <string.h>
@@ -79,11 +78,11 @@ int main(int argc, char **argv) {
 
     printf("TimeSize -\t%lu\n", sizeTime);
 
-    TYPE dx = fabs(setting.XSTART - setting.XEND) / setting.NX;
-    TYPE dy = fabs(setting.YSTART - setting.YEND) / setting.NY;
-    TYPE dz = fabs(setting.ZSTART - setting.ZEND) / setting.NZ;
+    TYPE dx = ABS(setting.XSTART - setting.XEND) / setting.NX;
+    TYPE dy = ABS(setting.YSTART - setting.YEND) / setting.NY;
+    TYPE dz = ABS(setting.ZSTART - setting.ZEND) / setting.NZ;
 
-    coeffs[0] = 1.0 - 2.0*setting.dt*setting.SIGMA*(1.0/(dx*dx) + 1.0/(dy*dy) + 1.0/(dz*dz));
+    coeffs[0] = 1.f - 2.f*setting.dt*setting.SIGMA*(1.f/(dx*dx) + 1.f/(dy*dy) + 1.f/(dz*dz));
     coeffs[1] = setting.dt * setting.SIGMA / (dx * dx);
     coeffs[2] = setting.dt * setting.SIGMA / (dy * dy);
     coeffs[3] = setting.dt * setting.SIGMA / (dz * dz);
@@ -108,6 +107,7 @@ int main(int argc, char **argv) {
   NZr = (NZ - RESERVE)/blockZP;
 
   MPI_Comm gridComm;
+
 
   //  размер каждой размерности
   int dims[DIM_CART];   int periods[DIM_CART];
@@ -210,6 +210,7 @@ int main(int argc, char **argv) {
     printf("FINISH!\n\n");
     t1 = MPI_Wtime();
   }
+  writeFunction3D(pathResult3D, u_chunk, NX, NY, NZ, SHIFT);
 
   // GATHER
   gather_by_block(u, u_chunk, NX, NY, NYr, NZr, RESERVE, gridComm);
@@ -217,7 +218,7 @@ int main(int argc, char **argv) {
   if (rankP == ROOT) {
     double diffTime = t1 - t0;
     printf("Time -\t%.3lf\n", diffTime);
-    writeFunction3D(pathResult3D, u, NX, NY, NZ, SHIFT);
+//    writeFunction3D(pathResult3D, u, NX, NY, NZ, SHIFT);
 
     printf("DONE!!!\n\n");
     free(u);

@@ -20,7 +20,7 @@ void freeSpMat(SpMatrix* mat) {
   free(mat->rowIndex);
 }
 
-# define multMV_default(result,mat, vec)                                      \
+# define multMV_default(result, mat, vec)                                      \
   TYPE localSum;                                                              \
   /*#pragma omp parallel private(localSum) if (ENABLE_PARALLEL)*/             \
   {                                                                           \
@@ -33,18 +33,26 @@ void freeSpMat(SpMatrix* mat) {
     }                                                                         \
   }                                                                           \
 
-# define multMV_mkl(result, mat, vec)                                                   \
+# define multMV_mkl_f(result, mat, vec)                                                 \
+  mkl_cspblas_scsrgemv("N", &mat.nRows, mat.value, mat.rowIndex, mat.col, vec, result); \
+
+# define multMV_mkl_d(result, mat, vec)                                                 \
   mkl_cspblas_dcsrgemv("N", &mat.nRows, mat.value, mat.rowIndex, mat.col, vec, result); \
+
 
 void multMV(TYPE* result, SpMatrix mat, TYPE* vec) {
 #ifdef MKL_RUN
-  multMV_mkl(result, mat, vec);
+  #if defined(FLOAT_TYPE)
+    multMV_mkl_f(result, mat, vec);
+  #elif defined(DOUBLE_TYPE)
+    multMV_mkl_d(result, mat, vec);
+  #endif
 #else
   multMV_default(result,mat, vec);
 #endif
 }
 
-void sumV(TYPE **result, TYPE *U, TYPE *k1, TYPE *k2, TYPE *k3, TYPE *k4, int N, double h) {
+void sumV(TYPE **result, TYPE *U, TYPE *k1, TYPE *k2, TYPE *k3, TYPE *k4, int N, TYPE h) {
   #pragma omp parallel for if (ENABLE_PARALLEL)
   for (int i = 0; i < N; i++)
     (*result)[i] = U[i] + h*(k1[i] + 2.0*k2[i] + 2.0*k3[i] + k4[i]);
@@ -72,8 +80,8 @@ TYPE procedure(SpMatrix mat, int i, int j) {
   return result;
 }
 
-void denseMult(double **result, double **mat, double *vec, int dim) {
-  memset(*result, 0, dim*sizeof(double));
+void denseMult(TYPE **result, TYPE **mat, TYPE *vec, int dim) {
+  memset(*result, 0, dim*sizeof(TYPE));
   for (int x = 0; x < dim; x++) {
     for (int i = 0;i < dim;i++)
       (*result)[x]+=mat[x][i]*vec[i];

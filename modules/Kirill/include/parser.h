@@ -12,19 +12,19 @@
 #define READING_ERROR 101
 
 typedef struct {
-  double XSTART;
-  double XEND;
-  double YSTART;
-  double YEND;
-  double ZSTART;
-  double ZEND;
-  double SIGMA;
+  TYPE XSTART;
+  TYPE XEND;
+  TYPE YSTART;
+  TYPE YEND;
+  TYPE ZSTART;
+  TYPE ZEND;
+  TYPE SIGMA;
   int NX;
   int NY;
   int NZ;
-  double TSTART;
-  double TFINISH;
-  double dt;
+  TYPE TSTART;
+  TYPE TFINISH;
+  TYPE dt;
   int BC;
 } Setting;
 

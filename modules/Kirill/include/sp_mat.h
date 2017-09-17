@@ -20,7 +20,7 @@ extern "C" {
 
 // CSR (Compressed Sparse Rows)
 typedef struct {
-  double* value;    // Элементы матрицы
+  TYPE* value;    // Элементы матрицы
   int* col;         // Номера столбцов для каждого элемента
   int* rowIndex;    // Место каждого ненулевого элемента в каждой строке
   int nz;        // Количество ненулевых элементов
@@ -34,7 +34,7 @@ void freeSpMat(SpMatrix* mat);
 void multMV(TYPE* result, SpMatrix matrix, TYPE* vector);
 
 // Суммирование векторов для рунге-кутты
-void sumV(TYPE **result, TYPE *U, TYPE *k1, TYPE *k2, TYPE *k3, TYPE *k4, int N, double h);
+void sumV(TYPE **result, TYPE *U, TYPE *k1, TYPE *k2, TYPE *k3, TYPE *k4, int N, TYPE h);
 
 void printSpMat(SpMatrix mat);
 TYPE procedure(SpMatrix mat, int i, int j);

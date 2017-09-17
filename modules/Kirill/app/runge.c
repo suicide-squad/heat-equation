@@ -75,9 +75,9 @@ int main(int argc, char **argv) {
     #endif
     printf("TimeSize -\t%lu\n", sizeTime);
 
-    double dx = fabs(setting.XSTART - setting.XEND)/setting.NX;
-    double dy = fabs(setting.YSTART - setting.YEND)/setting.NY;
-    double dz = fabs(setting.ZSTART - setting.ZEND)/setting.NZ;
+    TYPE dx = ABS(setting.XSTART - setting.XEND)/setting.NX;
+    TYPE dy = ABS(setting.YSTART - setting.YEND)/setting.NY;
+    TYPE dz = ABS(setting.ZSTART - setting.ZEND)/setting.NZ;
 
     dt = setting.dt;
 
