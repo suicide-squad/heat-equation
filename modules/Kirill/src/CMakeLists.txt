@@ -6,6 +6,7 @@ file(GLOB srcs "${CMAKE_CURRENT_SOURCE_DIR}/*.c")
 find_package(MKL)
 
 if (MKL_FOUND AND ${MKL_RUN})
+    message(STATUS "MKL RUN")
     add_definitions(-DMKL_RUN)
     include_directories(${MKL_INCLUDE_DIRS})
     link_directories(${MKL_LIBRARIES})

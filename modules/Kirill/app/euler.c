@@ -124,8 +124,8 @@ int main(int argc, char **argv) {
   MPI_Cart_coords(gridComm, rankP, DIM_CART, gridCoords);
 
   int dimChunk = NX*(NYr+RESERVE)*(NZr+RESERVE);
-  u_chunk = (TYPE *)calloc(dimChunk, sizeof(TYPE));
-  un_chunk = (TYPE *)malloc(sizeof(TYPE)*dimChunk);
+  u_chunk = (TYPE *)aligned_alloc(64, sizeof(TYPE)*dimChunk);
+  un_chunk = (TYPE *)aligned_alloc(64, sizeof(TYPE)*dimChunk);
 
   TYPE *tmp;
 

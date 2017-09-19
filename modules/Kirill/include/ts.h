@@ -12,7 +12,7 @@
 #define ROOT 0
 
 //TODO: Как грамотно считать тип?
-#define FLOAT_TYPE
+#define DOUBLE_TYPE
 
 #if defined(COMPLEX_TYPE)
 

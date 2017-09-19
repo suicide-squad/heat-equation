@@ -1,16 +1,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <immintrin.h>
 
 #include <mpi.h>
+#include <sp_mat.h>
 
 #include "sp_mat.h"
 
 void initSpMat(SpMatrix *mat, int nz, int nRows) {
   mat->nz = nz;
   mat->nRows = nRows;
-  mat->value = (TYPE *)malloc(sizeof(TYPE) * nz);
-  mat->col = (int *)malloc(sizeof(int) * nz);
+  mat->value = (TYPE *)aligned_alloc(64, sizeof(TYPE) * nz);
+  mat->col = (int *)aligned_alloc(32, sizeof(int) * nz);
   mat->rowIndex = (int *)calloc(nRows + 1, sizeof(int));
 }
 
@@ -20,18 +22,46 @@ void freeSpMat(SpMatrix* mat) {
   free(mat->rowIndex);
 }
 
-# define multMV_default(result, mat, vec)                                      \
-  TYPE localSum;                                                              \
-  /*#pragma omp parallel private(localSum) if (ENABLE_PARALLEL)*/             \
-  {                                                                           \
-  /*#pragma omp for nowait*/                                                  \
-    for (int i = 0; i < mat.nRows; i++) {                                     \
-      localSum = 0.0;                                                         \
-      for (int j = mat.rowIndex[i]; j < mat.rowIndex[i + 1]; j++)             \
-        localSum += mat.value[j] * vec[mat.col[j]];                           \
-      result[i] = localSum;                                                   \
-    }                                                                         \
-  }                                                                           \
+inline void multMV_default(TYPE* result, SpMatrix mat, TYPE* vec) {
+  TYPE localSum;
+#pragma omp parallel private(localSum) if (ENABLE_PARALLEL)
+  {
+#pragma omp for nowait
+    for (int i = 0; i < mat.nRows; i++) {
+      localSum = 0.0;
+      for (int j = mat.rowIndex[i]; j < mat.rowIndex[i + 1]; j++)
+        localSum += mat.value[j] * vec[mat.col[j]];
+      result[i] = localSum;
+    }
+  }
+}
+
+void multMV_AVX(double* result, SpMatrix mat, double* vec) {
+  double * val = mat.value;
+  int remainder = mat.nRows%4;
+  int nrows = mat.nRows - remainder;
+    for (int i = 0; i < nrows; i+=4) {
+      __m256d col_sum = _mm256_set1_pd(0.);
+      __m256d col_x = _mm256_load_pd(vec);
+      __m256d col_val;
+      for (int j = 0; j < 7; j++) {
+        __m128i vindex = _mm_setr_epi32(j, j+7, j+14, j+21);
+        col_val = _mm256_i32gather_pd(val, vindex, 8);
+        col_sum = _mm256_fmadd_pd(col_val, col_x, col_sum);
+      }
+      _mm256_stream_pd(result, col_sum);
+      vec += 4;
+      result += 4;
+    }
+//  остаток
+  TYPE localSum;
+  for (int i = nrows; i < mat.nRows; i++) {
+    localSum = 0.0;
+    for (int j = mat.rowIndex[i]; j < mat.rowIndex[i + 1]; j++)
+      localSum += mat.value[j] * vec[mat.col[j]];
+    result[i] = localSum;
+  }
+}
 
 # define multMV_mkl_f(result, mat, vec)                                                 \
   mkl_cspblas_scsrgemv("N", &mat.nRows, mat.value, mat.rowIndex, mat.col, vec, result); \
@@ -48,7 +78,7 @@ void multMV(TYPE* result, SpMatrix mat, TYPE* vec) {
     multMV_mkl_d(result, mat, vec);
   #endif
 #else
-  multMV_default(result,mat, vec);
+  multMV_AVX(result,mat, vec);
 #endif
 }
 
