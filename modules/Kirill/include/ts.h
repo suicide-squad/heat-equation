@@ -7,9 +7,11 @@
 
 #include <mpi.h>
 #include <math.h>
+#include <immintrin.h>
 
 #define ENABLE_PARALLEL 0
 #define ROOT 0
+#define NR 7
 
 //TODO: Как грамотно считать тип?
 #define DOUBLE_TYPE
@@ -20,12 +22,24 @@
 #define DEF_TYPE COMPLEX
 typedef complex TYPE;
 
+
 #elif defined(FLOAT_TYPE)
 
 #define MPI_TYPE MPI_FLOAT
 #define PRI_TYPE "f"
 #define PRIE_TYPE ".7e"
 #define ABS(x) fabsf(x)
+
+#define LENVEC 8
+#define m_real __m256
+#define m_ind __m256i
+
+#define mm_set1(a) _mm256_set1_ps(a)
+#define mm_load(vec) _mm256_load_ps(vec)
+#define mm_set_epi32(j) _mm256_set_epi32(j+NR*7, j+NR*6, j+NR*5, j+NR*4, j+NR*3, j+NR*2, j+NR*1, j+NR*0)
+#define mm_i32gather(val, vindex) _mm256_i32gather_ps(val, vindex, 4)
+#define mm_fmadd(a, b, c) _mm256_fmadd_ps(a, b, c);
+#define mm_stream(out, in) _mm256_stream_ps(out, in)
 typedef float TYPE;
 
 #elif defined(DOUBLE_TYPE)
@@ -34,6 +48,19 @@ typedef float TYPE;
 #define PRI_TYPE "lf"
 #define PRIE_TYPE ".15le"
 #define ABS(x) fabs(x)
+
+#define LENVEC 4
+#define m_real __m256d
+#define m_ind __m128i
+
+#define mm_set1(a) _mm256_set1_pd(a)
+#define mm_load(vec) _mm256_load_pd(vec)
+#define mm_set_epi32(j) _mm_setr_epi32(j+NR*0, j+NR*1, j+NR*2, j+NR*3)
+#define mm_i32gather(val, vindex) _mm256_i32gather_pd(val, vindex, 8)
+#define mm_fmadd(a, b, c) _mm256_fmadd_pd(a, b, c);
+#define mm_stream(out, in) _mm256_stream_pd(out, in)
+
+
 typedef double TYPE;
 
 #endif

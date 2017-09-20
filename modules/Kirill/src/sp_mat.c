@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <immintrin.h>
 
 #include <mpi.h>
 #include <sp_mat.h>
@@ -11,7 +10,7 @@
 void initSpMat(SpMatrix *mat, int nz, int nRows) {
   mat->nz = nz;
   mat->nRows = nRows;
-  mat->value = (TYPE *)aligned_alloc(64, sizeof(TYPE) * nz);
+  mat->value = (TYPE *)aligned_alloc(32, sizeof(TYPE) * nz);
   mat->col = (int *)aligned_alloc(32, sizeof(int) * nz);
   mat->rowIndex = (int *)calloc(nRows + 1, sizeof(int));
 }
@@ -36,24 +35,24 @@ inline void multMV_default(TYPE* result, SpMatrix mat, TYPE* vec) {
   }
 }
 
-void multMV_AVX(double* result, SpMatrix mat, double* vec) {
-  double * val = mat.value;
-  int remainder = mat.nRows%4;
+void multMV_AVX(TYPE* result, SpMatrix mat, TYPE* vec) {
+  TYPE * val = mat.value;
+  int remainder = mat.nRows % LENVEC;
   int nrows = mat.nRows - remainder;
-    for (int i = 0; i < nrows; i+=4) {
-      __m256d col_sum = _mm256_set1_pd(0.);
-      __m256d col_x = _mm256_load_pd(vec);
-      __m256d col_val;
-      for (int j = 0; j < 7; j++) {
-        __m128i vindex = _mm_setr_epi32(j, j+7, j+14, j+21);
-        col_val = _mm256_i32gather_pd(val, vindex, 8);
-        col_sum = _mm256_fmadd_pd(col_val, col_x, col_sum);
+//  #pragma omp parallel for if (ENABLE_PARALLEL)
+  for (int i = 0; i < nrows; i += LENVEC) {
+      m_real col_sum = mm_set1(0.0);
+      m_real col_x = mm_load(vec);
+      for (int j = 0; j < NR; j++) {
+        m_ind vindex = mm_set_epi32(j);
+        m_real col_val = mm_i32gather(val, vindex);
+        col_sum = mm_fmadd(col_val, col_x, col_sum);
       }
-      _mm256_stream_pd(result, col_sum);
-      vec += 4;
-      result += 4;
+      mm_stream(result, col_sum);
+      vec += LENVEC;
+      result += LENVEC;
     }
-//  остаток
+  //  остаток
   TYPE localSum;
   for (int i = nrows; i < mat.nRows; i++) {
     localSum = 0.0;
@@ -71,14 +70,16 @@ void multMV_AVX(double* result, SpMatrix mat, double* vec) {
 
 
 void multMV(TYPE* result, SpMatrix mat, TYPE* vec) {
-#ifdef MKL_RUN
+#if defined(MKL_RUN)
   #if defined(FLOAT_TYPE)
     multMV_mkl_f(result, mat, vec);
   #elif defined(DOUBLE_TYPE)
     multMV_mkl_d(result, mat, vec);
   #endif
-#else
+#elif defined(AVX2_RUN)
   multMV_AVX(result,mat, vec);
+#else
+  multMV_default(result, mat, vec);
 #endif
 }
 

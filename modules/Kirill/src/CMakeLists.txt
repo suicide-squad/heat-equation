@@ -12,6 +12,13 @@ if (MKL_FOUND AND ${MKL_RUN})
     link_directories(${MKL_LIBRARIES})
 endif ()
 
+find_package(AVX)
+#if(AVX_FOUND AND ${AVX_2})
+if(${AVX2_RUN})
+    message(STATUS "AVX2 RUN")
+    add_definitions(-DAVX2_RUN)
+endif()
+
 #add_definitions(-DDOUBLE_TYPE)
 
 add_library(${target} STATIC ${hrcs} ${srcs})

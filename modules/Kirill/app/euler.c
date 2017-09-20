@@ -21,7 +21,7 @@
 
 const char pathSetting[] = "../../../../initial/setting3.ini";
 const char pathFunction[] = "../../../../initial/function3.txt";
-const char pathResult3D[] = "../../../../result/Kirill/euler3D_gcc.txt";
+const char pathResult3D[] = "../../../../result/Kirill/euler3D_double_avx.txt";
 
 //const char pathSetting[] = "setting3.ini";
 //const char pathFunction[] = "function3.txt";
@@ -124,8 +124,8 @@ int main(int argc, char **argv) {
   MPI_Cart_coords(gridComm, rankP, DIM_CART, gridCoords);
 
   int dimChunk = NX*(NYr+RESERVE)*(NZr+RESERVE);
-  u_chunk = (TYPE *)aligned_alloc(64, sizeof(TYPE)*dimChunk);
-  un_chunk = (TYPE *)aligned_alloc(64, sizeof(TYPE)*dimChunk);
+  u_chunk = (TYPE *)aligned_alloc(32, sizeof(TYPE)*dimChunk);
+  un_chunk = (TYPE *)aligned_alloc(32, sizeof(TYPE)*dimChunk);
 
   TYPE *tmp;
 
@@ -135,7 +135,7 @@ int main(int argc, char **argv) {
   int nonZero = dimChunk*7;
 
   initSpMat(&mat, nonZero, dimChunk);
-  createExplicitSpMatV2(&mat, coeffs, NX, NYr + 2, NZr + 2);
+  createExplicitSpMatV2(&mat, coeffs, NX, NYr + RESERVE, NZr + RESERVE);
 
   int rank_left, rank_right, rank_down, rank_top;
   MPI_Cart_shift(gridComm, 1, -1, &rank_left, &rank_right);
