@@ -35,22 +35,28 @@ inline void multMV_default(TYPE* result, SpMatrix mat, TYPE* vec) {
   }
 }
 
-void multMV_AVX(TYPE* result, SpMatrix mat, TYPE* vec) {
+inline void multMV_AVX(TYPE* result, SpMatrix mat, TYPE* vec) {
   TYPE * val = mat.value;
+  int *col = mat.col;
   int remainder = mat.nRows % LENVEC;
   int nrows = mat.nRows - remainder;
 //  #pragma omp parallel for if (ENABLE_PARALLEL)
   for (int i = 0; i < nrows; i += LENVEC) {
-      m_real col_sum = mm_set1(0.0);
-      m_real col_x = mm_load(vec);
-      for (int j = 0; j < NR; j++) {
-        m_ind vindex = mm_set_epi32(j);
-        m_real col_val = mm_i32gather(val, vindex);
-        col_sum = mm_fmadd(col_val, col_x, col_sum);
+      m_real suml = mm_set1(0.0);
+
+    for (int j = 0; j < NR; j++) {
+      m_ind vindex = mm_set_epi32(j);
+      m_real v_val = mm_i32gather(val, vindex);
+      m_ind vindex2 = mm_set_epi32(j);
+      m_ind c = _mm_i32gather_epi32(col, vindex2, 4);
+      m_real x = mm_i32gather(vec, c);
+
+      suml = mm_fmadd(v_val, x, suml);
       }
-      mm_stream(result, col_sum);
-      vec += LENVEC;
+      mm_stream(result, suml);
       result += LENVEC;
+      val += LENVEC*NR;
+      col += LENVEC*NR;
     }
   //  остаток
   TYPE localSum;
@@ -59,6 +65,33 @@ void multMV_AVX(TYPE* result, SpMatrix mat, TYPE* vec) {
     for (int j = mat.rowIndex[i]; j < mat.rowIndex[i + 1]; j++)
       localSum += mat.value[j] * vec[mat.col[j]];
     result[i] = localSum;
+  }
+}
+
+inline void multMV_AVX_v2(TYPE* result, SpMatrix mat, TYPE* vec) {
+//  #pragma omp parallel for if (ENABLE_PARALLEL)
+//    __m128i mask = _mm_setr_epi32(-1, -1, -1, 0);
+//  __m256d mask2 = _mm256_setr_pd(-1,-1,-1,0);
+//  __m256d zero =_mm256_setzero_pd();
+
+  for (int row = 0; row < mat.nRows; row ++) {
+    __m128i v_col1 = _mm_load_si128((const __m128i*)mat.col);
+    __m256d v_val1 = _mm256_load_pd(mat.value);
+    __m256d v_vec1 = _mm256_i32gather_pd(vec, v_col1, 8);
+
+    __m256d rowsum = _mm256_mul_pd(v_vec1, v_val1);
+
+//    __m128i v_col2 = _mm_maskload_epi32(mat.col+4, mask);
+    __m128i v_col2 = _mm_load_si128((const __m128i*)(mat.col+4));
+    __m256d v_val2 = _mm256_load_pd(mat.value+4);
+    __m256d v_vec2 = _mm256_i32gather_pd(vec, v_col2, 8);
+//    __m256d v_vec2 = _mm256_mask_i32gather_pd(zero, vec, v_col2, mask2, 8);
+
+    rowsum = _mm256_fmadd_pd(v_vec2, v_val2, rowsum);
+    __m256d s = _mm256_hadd_pd(rowsum, rowsum);
+    result[row] = ((double*)&s)[0] + ((double*)&s)[2];
+    mat.value+=8;
+    mat.col+=8;
   }
 }
 
@@ -77,7 +110,7 @@ void multMV(TYPE* result, SpMatrix mat, TYPE* vec) {
     multMV_mkl_d(result, mat, vec);
   #endif
 #elif defined(AVX2_RUN)
-  multMV_AVX(result,mat, vec);
+  multMV_AVX_v2(result,mat, vec);
 #else
   multMV_default(result, mat, vec);
 #endif
@@ -193,7 +226,11 @@ void createExplicitSpMat(SpMatrix *mat, TYPE coeffs[4], int dim, int NX, int NXY
     index++;
     // ***************************************
 
-    mat->rowIndex[i + 1] = mat->rowIndex[i] + 7;
+    mat->col[index] = 0;
+    mat->value[index] = 0.0;
+    index++;
+
+    mat->rowIndex[i + 1] = mat->rowIndex[i] + 8;
   }
 }
 
@@ -279,8 +316,12 @@ void createExplicitSpMatV2(SpMatrix *mat, TYPE coeffs[4], int nx, int ny, int nz
         mat->value[index] = coeffs[3];
         index++;
 
+        mat->col[index] = 0;
+        mat->value[index] = 0.0;
+        index++;
+
         k++;
-        mat->rowIndex[k] = mat->rowIndex[k-1] + 7;
+        mat->rowIndex[k] = mat->rowIndex[k-1] + 8 ;
 
       }
 
