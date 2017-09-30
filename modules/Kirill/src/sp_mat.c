@@ -35,63 +35,221 @@ inline void multMV_default(TYPE* result, SpMatrix mat, TYPE* vec) {
   }
 }
 
-inline void multMV_AVX(TYPE* result, SpMatrix mat, TYPE* vec) {
+#define IND2(x,y,z) ((x) + (y)*nx + (z)*ny*nx)
+
+
+inline void multMV_AVX_1(TYPE* result, SpMatrix mat, TYPE* vec, TYPE* coeff) {
   TYPE * val = mat.value;
-  int *col = mat.col;
-  int remainder = mat.nRows % LENVEC;
-  int nrows = mat.nRows - remainder;
-//  #pragma omp parallel for if (ENABLE_PARALLEL)
-  for (int i = 0; i < nrows; i += LENVEC) {
-      m_real suml = mm_set1(0.0);
+  TYPE *vec2;
+  int nx = 66;
+  int ny = 66;
+  int nz = 66;
 
-    for (int j = 0; j < NR; j++) {
-      m_ind vindex = mm_set_epi32(j);
-      m_real v_val = mm_i32gather(val, vindex);
-      m_ind vindex2 = mm_set_epi32(j);
-      m_ind c = _mm_i32gather_epi32(col, vindex2, 4);
-      m_real x = mm_i32gather(vec, c);
-
-      suml = mm_fmadd(v_val, x, suml);
+    for (int z = 0; z < nz; z++) {
+    for (int y = 0; y < ny; y++) {
+      for (int x = 0; x < nx; x++) {
+        if (x==0)
+          vec[IND2(x,y,z)]=vec[IND2(x+1,y,z)];
+        if (x==nx-1)
+          vec[IND2(x,y,z)]=vec[IND2(x-1,y,z)];
+        if (y==0)
+          vec[IND2(x,y,z)]=vec[IND2(x,y+1,z)];
+        if (y==nx-1)
+          vec[IND2(x,y,z)]=vec[IND2(x,y-1,z)];
+        if (z==0)
+          vec[IND2(x,y,z)]=vec[IND2(x,y,z+1)];
+        if (z==nx-1)
+          vec[IND2(x,y,z)]=vec[IND2(x,y,z-1)];
       }
-      mm_stream(result, suml);
-      result += LENVEC;
-      val += LENVEC*NR;
-      col += LENVEC*NR;
     }
-  //  остаток
-  TYPE localSum;
-  for (int i = nrows; i < mat.nRows; i++) {
-    localSum = 0.0;
-    for (int j = mat.rowIndex[i]; j < mat.rowIndex[i + 1]; j++)
-      localSum += mat.value[j] * vec[mat.col[j]];
-    result[i] = localSum;
+  }
+
+  for (int z = 0; z < nz; z++) {
+    if (z == 0 || z == nz - 1) {
+      val += nx*ny * NR;  result += nx*ny;
+      continue;
+    }
+    for (int y = 0; y < ny; y++) {
+      if (y == 0 || y == ny - 1) {
+        val += nx * NR;   result += nx;
+        continue;
+      }
+
+      for (int x = 0; x < nx; x ++) {
+        if (x == 0 || x == nx - 1) {
+          val += 1 * NR;   result += 1;
+          continue;
+        }
+
+        vec2 = &vec[IND2(x,y,z-1)];
+        m_ind index4 = mm_set_epi32(0);
+        m_real val4 = mm_i32gather(val, index4);
+        m_real vec4 = mm_load(vec2);
+        m_real sum4 = _mm256_mul_pd(val4, vec4);
+
+        index4 = mm_set_epi32(1);
+        val4 = mm_i32gather(val, index4);
+        vec2 += nx*ny - nx;
+        vec4 = mm_load(vec2);
+        sum4 = mm_fmadd(val4, vec4, sum4);
+
+        index4 = mm_set_epi32(2);
+        val4 = mm_i32gather(val, index4);
+        vec2 += nx -1;
+        vec4 = mm_load(vec2);
+        sum4 = mm_fmadd(val4, vec4, sum4);
+
+        index4 = mm_set_epi32(3);
+        val4 = mm_i32gather(val, index4);
+        vec2 ++;
+        vec4 = mm_load(vec2);
+        sum4 = mm_fmadd(val4, vec4, sum4);
+
+        index4 = mm_set_epi32(4);
+        val4 = mm_i32gather(val, index4);
+        vec2 ++;
+        vec4 = mm_load(vec2);
+        sum4 = mm_fmadd(val4, vec4, sum4);
+
+        index4 = mm_set_epi32(5);
+        val4 = mm_i32gather(val, index4);
+        vec2 += -1 + nx;
+        vec4 = mm_load(vec2);
+        sum4 = mm_fmadd(val4, vec4, sum4);
+
+        index4 = mm_set_epi32(6);
+        val4 = mm_i32gather(val, index4);
+        vec2 += -nx + nx*ny;
+        vec4 = mm_load(vec2);
+        sum4 = mm_fmadd(val4, vec4, sum4);
+        mm_stream(result, sum4);
+
+        x+=3;
+        result+=4;
+        val += 4 * NR;
+      }
+    }
+  }
+}
+
+
+
+inline void multMV_AVX(TYPE* result, SpMatrix mat, TYPE* vec, TYPE* coeff) {
+  TYPE * val = mat.value;
+  TYPE *vec2;
+  int nx = 66;
+  int ny = 66;
+  int nz = 66;
+//  vec+=67;
+  //  for (int z = 0; z < nz; z++) {
+//    for (int y = 0; y < ny; y++) {
+//      for (int x = 0; x < nx; x++) {
+//        if (x==0)
+//          vec[IND2(x,y,z)]=vec[IND2(x+1,y,z)];
+//        if (x==nx-1)
+//          vec[IND2(x,y,z)]=vec[IND2(x-1,y,z)];
+//        if (y==0)
+//          vec[IND2(x,y,z)]=vec[IND2(x,y+1,z)];
+//        if (y==nx-1)
+//          vec[IND2(x,y,z)]=vec[IND2(x,y-1,z)];
+//        if (z==0)
+//          vec[IND2(x,y,z)]=vec[IND2(x,y,z+1)];
+//        if (z==nx-1)
+//          vec[IND2(x,y,z)]=vec[IND2(x,y,z-1)];
+//      }
+//    }
+//  }
+
+  m_real val41 = _mm256_set1_pd(coeff[0]);
+  m_real val42 = _mm256_set1_pd(coeff[1]);
+  m_real val43 = _mm256_set1_pd(coeff[2]);
+  m_real val44 = _mm256_set1_pd(coeff[3]);
+
+  for (int z = 0; z < nz; z++) {
+    if (z == 0 || z == nz - 1) {
+      val += nx*ny * NR;  result += nx*ny;
+      continue;
+    }
+//    vec2 = vec + 2*nx;
+    for (int y = 0; y < ny; y++) {
+      if (y == 0 || y == ny - 1) {
+        val += nx * NR;   result += nx;
+        continue;
+      }
+//      vec2 = vec + 12;
+
+      for (int x = 0; x < nx; x ++) {
+        if (x == 0 || x == nx - 1) {
+          val += 1 * NR;
+          result += 1;
+          continue;
+        }
+//              printf("x=%d y=%d z=%d\n", x, y ,z);
+//        m_real sum4 = _mm256_setzero_pd();
+
+//        for (int j = 0; j < NR; j++) {
+//          m_ind index4 = mm_set_epi32(j);
+//          m_real val4 = mm_i32gather(val, index4);
+
+        TYPE * tmp = vec2;
+        m_real vec4 = mm_load(tmp);
+        m_real sum4 = _mm256_mul_pd(val44, vec4);
+        tmp+=(nx)*ny;
+        vec4 = mm_load(tmp);
+        sum4 = mm_fmadd(val43, vec4, sum4);
+        tmp+=nx;
+        vec4 = mm_load(tmp);
+        sum4 = mm_fmadd(val42, vec4, sum4);
+        tmp+=1;
+        vec4 = mm_load(tmp);
+        sum4 = mm_fmadd(val41, vec4, sum4);
+        tmp+=1;
+        vec4 = mm_load(tmp);
+        sum4 = mm_fmadd(val42, vec4, sum4);
+        tmp+=nx;
+        vec4 = mm_load(tmp);
+        sum4 = mm_fmadd(val43, vec4, sum4);
+        tmp+=(nx)*ny;
+        vec4 = mm_load(tmp);
+        sum4 = mm_fmadd(val44, vec4, sum4);
+//        }
+        mm_stream(result, sum4);
+        x+=3;
+//        val +=4*NR;
+        result+=4;
+        vec2+=4;
+      }
+    }
   }
 }
 
 inline void multMV_AVX_v2(TYPE* result, SpMatrix mat, TYPE* vec) {
-//  #pragma omp parallel for if (ENABLE_PARALLEL)
 //    __m128i mask = _mm_setr_epi32(-1, -1, -1, 0);
 //  __m256d mask2 = _mm256_setr_pd(-1,-1,-1,0);
 //  __m256d zero =_mm256_setzero_pd();
-
+//  #pragma omp parallel for if (ENABLE_PARALLEL)
   for (int row = 0; row < mat.nRows; row ++) {
-    __m128i v_col1 = _mm_load_si128((const __m128i*)mat.col);
-    __m256d v_val1 = _mm256_load_pd(mat.value);
-    __m256d v_vec1 = _mm256_i32gather_pd(vec, v_col1, 8);
+    m_ind v_col1 = mm_load_si(mat.col);
+    m_real v_val1 = mm_load(mat.value);
+    m_real v_vec1 = mm_i32gather(vec, v_col1);
 
-    __m256d rowsum = _mm256_mul_pd(v_vec1, v_val1);
+    m_real rowsum = mm_mul(v_vec1, v_val1);
 
+#ifdef DOUBLE_TYPE
 //    __m128i v_col2 = _mm_maskload_epi32(mat.col+4, mask);
-    __m128i v_col2 = _mm_load_si128((const __m128i*)(mat.col+4));
-    __m256d v_val2 = _mm256_load_pd(mat.value+4);
-    __m256d v_vec2 = _mm256_i32gather_pd(vec, v_col2, 8);
+    m_ind v_col2 = mm_load_si(mat.col+LENVEC);
+    m_real v_val2 = mm_load(mat.value+LENVEC);
+    m_real v_vec2 = mm_i32gather(vec, v_col2);
 //    __m256d v_vec2 = _mm256_mask_i32gather_pd(zero, vec, v_col2, mask2, 8);
-
-    rowsum = _mm256_fmadd_pd(v_vec2, v_val2, rowsum);
-    __m256d s = _mm256_hadd_pd(rowsum, rowsum);
-    result[row] = ((double*)&s)[0] + ((double*)&s)[2];
-    mat.value+=8;
-    mat.col+=8;
+    rowsum = mm_fmadd(v_vec2, v_val2, rowsum);
+    rowsum = mm_hadd(rowsum, rowsum);
+#endif
+    result[row] = ((TYPE*)&rowsum)[0] + ((TYPE*)&rowsum)[2];
+#ifdef FLOAT_TYPE
+    result[row] += ((TYPE*)&rowsum)[4] + ((TYPE*)&rowsum)[6];
+#endif
+    mat.value += NR;
+    mat.col += NR;
   }
 }
 
@@ -102,7 +260,7 @@ inline void multMV_AVX_v2(TYPE* result, SpMatrix mat, TYPE* vec) {
   mkl_cspblas_dcsrgemv("N", &mat.nRows, mat.value, mat.rowIndex, mat.col, vec, result); \
 
 
-void multMV(TYPE* result, SpMatrix mat, TYPE* vec) {
+void multMV(TYPE* result, SpMatrix mat, TYPE* vec, TYPE* coeff) {
 #if defined(MKL_RUN)
   #if defined(FLOAT_TYPE)
     multMV_mkl_f(result, mat, vec);
@@ -110,7 +268,7 @@ void multMV(TYPE* result, SpMatrix mat, TYPE* vec) {
     multMV_mkl_d(result, mat, vec);
   #endif
 #elif defined(AVX2_RUN)
-  multMV_AVX_v2(result,mat, vec);
+  multMV_AVX_1(result,mat, vec, coeff);
 #else
   multMV_default(result, mat, vec);
 #endif
@@ -226,11 +384,11 @@ void createExplicitSpMat(SpMatrix *mat, TYPE coeffs[4], int dim, int NX, int NXY
     index++;
     // ***************************************
 
-    mat->col[index] = 0;
-    mat->value[index] = 0.0;
-    index++;
+//    mat->col[index] = 0;
+//    mat->value[index] = 0.0;
+//    index++;
 
-    mat->rowIndex[i + 1] = mat->rowIndex[i] + 8;
+    mat->rowIndex[i + 1] = mat->rowIndex[i] + NR;
   }
 }
 
@@ -316,12 +474,12 @@ void createExplicitSpMatV2(SpMatrix *mat, TYPE coeffs[4], int nx, int ny, int nz
         mat->value[index] = coeffs[3];
         index++;
 
-        mat->col[index] = 0;
-        mat->value[index] = 0.0;
-        index++;
+//        mat->col[index] = 0;
+//        mat->value[index] = 0.0;
+//        index++;
 
         k++;
-        mat->rowIndex[k] = mat->rowIndex[k-1] + 8 ;
+        mat->rowIndex[k] = mat->rowIndex[k-1] + NR ;
 
       }
 
