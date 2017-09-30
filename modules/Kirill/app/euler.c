@@ -3,31 +3,18 @@
 //
 
 #include <stdio.h>
-#include <math.h>
 #include <stdlib.h>
 #include <mpi.h>
-#include <string.h>
 
-#include "sp_mat.h"
+#include "kernel.h"
 #include "parser.h"
 #include "sgpu.h"
 
-#include <sys/utsname.h>
-
-#define ROOT 0
 #define DIM_CART 2
 #define SHIFT 1
 #define RESERVE SHIFT*2
 
-#define IND(x,y,z) ((x) + (y)*NX + (z)*NX*(NYr + 2))
-
-const char pathSetting[] = "../../../../initial/setting3.ini";
-const char pathFunction[] = "../../../../initial/function3.txt";
-const char pathResult3D[] = "../../../../result/Kirill/euler3D_3.txt";
-
-//const char pathSetting[] = "setting3.ini";
-//const char pathFunction[] = "function3.txt";
-//const char pathResult3D[] = "res.txt";
+#define IND(x,y,z) ((x) + (y)*NX + (z)*NX*(NYr + RESERVE))
 
 int main(int argc, char **argv) {
   int sizeP, rankP;
@@ -44,29 +31,29 @@ int main(int argc, char **argv) {
   MPI_Comm_size(MPI_COMM_WORLD, &sizeP);
   MPI_Comm_rank(MPI_COMM_WORLD, &rankP);
 
-  const size_t len=80;
+  const int len=80;
   char nameHost[len];
   gethostname(nameHost, len);
   printf("rank - %d name host - %s\n",rankP, nameHost);
 
   SpMatrix mat;
-  size_t dim;
-  double coeffs[4];
-  double* u = NULL, *u_chunk = NULL, *un_chunk;
+  int dim;
+  TYPE coeffs[4];
+  TYPE* u = NULL, *u_chunk = NULL, *un_chunk;
 
   int NX, NY, NZ, NYr, NZr;
 
   if (rankP == ROOT) {
     int error;
     Setting setting;
-    error = readSetting(pathSetting, &setting);
+    error = readSetting(INPUT_EULER_SETTING_PATH, &setting);
 
     if (error != OK) return error;
 
-    dim = (size_t)(setting.NX+RESERVE)*(setting.NY+RESERVE)*(setting.NZ+RESERVE);
-    u = (double *) calloc(dim, sizeof(double));
+    dim = (setting.NX+RESERVE)*(setting.NY+RESERVE)*(setting.NZ+RESERVE);
+    u = (TYPE *)calloc(dim, sizeof(TYPE));
 
-    error = readFunction(pathFunction, u, setting.NX+RESERVE,
+    error = readFunction(INPUT_EULER_FUNCTION_PATH, u, setting.NX+RESERVE,
                          setting.NY+RESERVE, setting.NZ+RESERVE, SHIFT);
 
     if (error != OK) return error;
@@ -80,14 +67,18 @@ int main(int argc, char **argv) {
 
     printf("TimeSize -\t%lu\n", sizeTime);
 
-    double dx = fabs(setting.XSTART - setting.XEND) / setting.NX;
-    double dy = fabs(setting.YSTART - setting.YEND) / setting.NY;
-    double dz = fabs(setting.ZSTART - setting.ZEND) / setting.NZ;
+    TYPE dx = ABS(setting.XSTART - setting.XEND) / setting.NX;
+    TYPE dy = ABS(setting.YSTART - setting.YEND) / setting.NY;
+    TYPE dz = ABS(setting.ZSTART - setting.ZEND) / setting.NZ;
 
-    coeffs[0] = 1.0 - 2.0*setting.dt*setting.SIGMA*(1.0/(dx*dx) + 1.0/(dy*dy) + 1.0/(dz*dz));
+    coeffs[0] = 1.f - 2.f*setting.dt*setting.SIGMA*(1.f/(dx*dx) + 1.f/(dy*dy) + 1.f/(dz*dz));
     coeffs[1] = setting.dt * setting.SIGMA / (dx * dx);
     coeffs[2] = setting.dt * setting.SIGMA / (dy * dy);
     coeffs[3] = setting.dt * setting.SIGMA / (dz * dz);
+//    coeffs[0] = 1;
+//    coeffs[1] = 2;
+//    coeffs[2] = 3;
+//    coeffs[3] = 4;
 
     NX = setting.NX + RESERVE;
     NY = setting.NY + RESERVE;
@@ -95,7 +86,7 @@ int main(int argc, char **argv) {
   }
 
   MPI_Bcast(&sizeTime, 1, MPI_UNSIGNED_LONG, ROOT, MPI_COMM_WORLD);
-  MPI_Bcast(coeffs, 4, MPI_DOUBLE, ROOT, MPI_COMM_WORLD);
+  MPI_Bcast(coeffs, 4, MPI_TYPE, ROOT, MPI_COMM_WORLD);
   MPI_Bcast(&NX, 1, MPI_INT, ROOT, MPI_COMM_WORLD);
   MPI_Bcast(&NY, 1, MPI_INT, ROOT, MPI_COMM_WORLD);
   MPI_Bcast(&NZ, 1, MPI_INT, ROOT, MPI_COMM_WORLD);
@@ -109,6 +100,7 @@ int main(int argc, char **argv) {
   NZr = (NZ - RESERVE)/blockZP;
 
   MPI_Comm gridComm;
+
 
   //  размер каждой размерности
   int dims[DIM_CART];   int periods[DIM_CART];
@@ -124,20 +116,19 @@ int main(int argc, char **argv) {
   // Определение координат процесса в решетке
   MPI_Cart_coords(gridComm, rankP, DIM_CART, gridCoords);
 
-  size_t dimChunk = (size_t)NX*(NYr+RESERVE)*(NZr+RESERVE);
-  u_chunk = (double *)calloc(dimChunk, sizeof(double));
-  un_chunk = (double *)malloc(sizeof(double)*dimChunk);
+  int dimChunk = NX*(NYr+RESERVE)*(NZr+RESERVE);
+  u_chunk = (TYPE *)aligned_alloc(32, sizeof(TYPE)*dimChunk);
+  un_chunk = (TYPE *)aligned_alloc(32, sizeof(TYPE)*dimChunk);
 
-  double *tmp;
+  TYPE *tmp;
 
-  //  SCATTER
+  // SCATTER
   scatter_by_block(u, u_chunk, NX, NY, NYr, NZr, gridComm, RESERVE);
 
-  size_t nonZero = dimChunk*7;
+  int nonZero = dimChunk*NR;
 
   initSpMat(&mat, nonZero, dimChunk);
-//  createExplicitSpMat(&mat, coeffs, dimChunk, NX, NX*(NYr+2));
-  createExplicitSpMatV2(&mat, coeffs, NX, NYr + 2, NZr + 2);
+  createExplicitSpMatV2(&mat, coeffs, NX, NYr + RESERVE, NZr + RESERVE);
 
   int rank_left, rank_right, rank_down, rank_top;
   MPI_Cart_shift(gridComm, 1, -1, &rank_left, &rank_right);
@@ -147,38 +138,20 @@ int main(int argc, char **argv) {
 
   // Создание типа плоскости XY и XZ
   MPI_Datatype planeXY;
-  MPI_Type_vector(NZr+RESERVE, NX, NX*(NYr+RESERVE), MPI_DOUBLE, &planeXY);
+  MPI_Type_vector(NZr+RESERVE, NX, NX*(NYr+RESERVE), MPI_TYPE, &planeXY);
   MPI_Type_commit(&planeXY);
 
   MPI_Datatype planeXZ;
-  MPI_Type_contiguous(NX*(NYr+RESERVE), MPI_DOUBLE, &planeXZ);
+  MPI_Type_contiguous(NX*(NYr+RESERVE), MPI_TYPE, &planeXZ);
   MPI_Type_commit(&planeXZ);
   // *****************************
 
-  for (int z = 0; z < NZr+RESERVE; z++) {
-    for (int y = 0; y < NYr+RESERVE; y++) {
-      for (int x = 0; x < NX; x++) {
-        if (x==0)
-          u_chunk[IND(x,y,z)]=u_chunk[IND(x+1,y,z)];
-        if (x==NX-1)
-          u_chunk[IND(x,y,z)]=u_chunk[IND(x-1,y,z)];
-        if (y==0)
-          u_chunk[IND(x,y,z)]=u_chunk[IND(x,y+1,z)];
-        if (y==NYr+1)
-          u_chunk[IND(x,y,z)]=u_chunk[IND(x,y-1,z)];
-        if (z==0)
-          u_chunk[IND(x,y,z)]=u_chunk[IND(x,y,z+1)];
-        if (z==NZr+1)
-          u_chunk[IND(x,y,z)]=u_chunk[IND(x,y,z-1)];
-      }
-    }
-  }
+  copyingBorders(u_chunk, NX, NYr+RESERVE, NZr+RESERVE);
 
   if (rankP == ROOT) {
     printf("START!\n");
     t0 = MPI_Wtime();
   }
-
   // ОСНОВНЫЕ ВЫЧИСЛЕНИЯ
   for (int t = 1; t <= sizeTime; t++) {
     //  ОБМЕН ГРАНИЦ ПО Y И Z
@@ -199,7 +172,7 @@ int main(int argc, char **argv) {
     MPI_Sendrecv(&u_chunk[IND(0, 0, NZr)], 1, planeXZ, rank_top, 3,
                  &u_chunk[IND(0, 0, 0)], 1, planeXZ, rank_down, 3, gridComm, &status[3]);
 
-    multMV(&un_chunk, mat, u_chunk);
+    multMV(un_chunk, mat, u_chunk, NX, (NYr+RESERVE), (NZr+RESERVE));
 
     tmp = u_chunk;
     u_chunk = un_chunk;
@@ -213,13 +186,13 @@ int main(int argc, char **argv) {
     t1 = MPI_Wtime();
   }
 
-  //        GATHER
+  // GATHER
   gather_by_block(u, u_chunk, NX, NY, NYr, NZr, RESERVE, gridComm);
 
   if (rankP == ROOT) {
     double diffTime = t1 - t0;
     printf("Time -\t%.3lf\n", diffTime);
-    writeFunction3D(pathResult3D, u, NX, NY, NZ, SHIFT);
+    writeFunction3D(RESULT_EULER_PATH, u, NX, NY, NZ, SHIFT);
 
     printf("DONE!!!\n\n");
     free(u);

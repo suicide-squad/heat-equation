@@ -5,7 +5,7 @@
 #ifndef HEAT_EQUATION_SGPU_H
 #define HEAT_EQUATION_SGPU_H
 
-#include <mpi.h>
+#include "ts.h"
 
 typedef enum {
   Y_RIGHT_SEND,
@@ -20,8 +20,8 @@ typedef enum {
 
 void get_blocks(int *blockY, int *blockZ, int sizeProc);
 
-void scatter_by_block(double* u, double* u_chunk, int nx, int ny, int nyr, int nzr, MPI_Comm gridComm, int reserve);
-void gather_by_block(double* u, double* u_chunk, int nx, int ny, int nyr, int nzr, int reserve, MPI_Comm gridComm);
+void scatter_by_block(TYPE* u, TYPE* u_chunk, int nx, int ny, int nyr, int nzr, MPI_Comm gridComm, int reserve);
+void gather_by_block(TYPE* u, TYPE* u_chunk, int nx, int ny, int nyr, int nzr, int reserve, MPI_Comm gridComm);
 
 
 #endif //HEAT_EQUATION_SGPU_H
