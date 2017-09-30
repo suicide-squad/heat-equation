@@ -31,7 +31,7 @@ void initSpMat(SpMatrix* mat, int nz, int nRows);
 void freeSpMat(SpMatrix* mat);
 
 // Умножение разреженной матрицы на вектор
-void multMV(TYPE* result, SpMatrix matrix, TYPE* vector);
+void multMV(TYPE* result, SpMatrix mat, TYPE* vec, int nx, int ny, int nz);
 
 // Суммирование векторов для рунге-кутты
 void sumV(TYPE **result, TYPE *U, TYPE *k1, TYPE *k2, TYPE *k3, TYPE *k4, int N, TYPE h);

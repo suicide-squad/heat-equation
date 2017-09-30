@@ -36,10 +36,13 @@ typedef complex TYPE;
 
 #define mm_set1(a) _mm256_set1_ps(a)
 #define mm_load(vec) _mm256_load_ps(vec)
+#define mm_load_si(vec) _mm256_load_si256((const __m256i *)(vec))
 #define mm_set_epi32(j) _mm256_set_epi32(j+NR*7, j+NR*6, j+NR*5, j+NR*4, j+NR*3, j+NR*2, j+NR*1, j+NR*0)
 #define mm_i32gather(val, vindex) _mm256_i32gather_ps(val, vindex, 4)
-#define mm_fmadd(a, b, c) _mm256_fmadd_ps(a, b, c);
-#define mm_stream(out, in) _mm256_stream_ps(out, in)
+#define mm_fmadd(a, b, c) _mm256_fmadd_ps(a, b, c)
+#define mm_hadd(a,b) _mm256_hadd_ps(a,b)
+#define mm_stream(out, in) _mm256_store_ps(out, in)
+#define mm_mul(a,b) _mm256_mul_ps(a,b)
 typedef float TYPE;
 
 #elif defined(DOUBLE_TYPE)
@@ -54,12 +57,14 @@ typedef float TYPE;
 #define m_ind __m128i
 
 #define mm_set1(a) _mm256_set1_pd(a)
-#define mm_load(vec) _mm256_load_pd(vec)
+#define mm_load(vec) _mm256_loadu_pd(vec)
+#define mm_load_si(vec) _mm_load_si128((const __m128i*)(vec))
 #define mm_set_epi32(j) _mm_setr_epi32(j+NR*0, j+NR*1, j+NR*2, j+NR*3)
 #define mm_i32gather(val, vindex) _mm256_i32gather_pd(val, vindex, 8)
-#define mm_fmadd(a, b, c) _mm256_fmadd_pd(a, b, c);
-#define mm_stream(out, in) _mm256_stream_pd(out, in)
-
+#define mm_fmadd(a, b, c) _mm256_fmadd_pd(a, b, c)
+#define mm_hadd(a,b) _mm256_hadd_pd(a,b)
+#define mm_stream(out, in) _mm256_storeu_pd(out, in)
+#define mm_mul(a,b) _mm256_mul_pd(a,b)
 
 typedef double TYPE;
 
