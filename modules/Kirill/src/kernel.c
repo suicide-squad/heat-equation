@@ -1,18 +1,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sp_mat.h>
+
 #include <mpi.h>
+#include <kernel.h>
 
-#include "sp_mat.h"
+#define IND_mult(x,y,z) ((x) + (y)*nx + (z)*ny*nx)
 
-void initSpMat(SpMatrix *mat, size_t nz, size_t nRows) {
+void initSpMat(SpMatrix *mat, int nz, int nRows) {
   mat->nz = nz;
   mat->nRows = nRows;
-  mat->value = (TYPE *)malloc(sizeof(TYPE) * nz);
-  mat->col = (int *)malloc(sizeof(int) * nz);
-  mat->rowIndex = (int *)malloc(sizeof(int) * (nRows) + 1);
-  memset(mat->rowIndex, 0, nRows + 1);
+  mat->value = (TYPE *)aligned_alloc(32, sizeof(TYPE) * nz);
+  mat->col = (int *)aligned_alloc(32, sizeof(int) * nz);
+  mat->rowIndex = (int *)calloc(nRows + 1, sizeof(int));
 }
 
 void freeSpMat(SpMatrix* mat) {
@@ -21,21 +21,146 @@ void freeSpMat(SpMatrix* mat) {
   free(mat->rowIndex);
 }
 
-void multMV(TYPE** result, SpMatrix mat, TYPE* vec) {
+inline void copyingBorders(TYPE* vec, int nx, int ny, int nz) {
+  memcpy(vec + IND_mult(0,0,0), vec + IND_mult(0,0,1), nx*ny*sizeof(TYPE));
+  for (int z = 1; z < nz-1; z++) {
+    memcpy(vec + IND_mult(0,0,z), vec + IND_mult(0,1,z), nx*sizeof(TYPE));
+    for (int y = 1; y < ny-1; y++) {
+      vec[IND_mult(0,y,z)] = vec[IND_mult(1,y,z)];
+      vec[IND_mult(nx-1,y,z)] = vec[IND_mult(nx-2,y,z)];
+    } // y
+    memcpy(vec + IND_mult(0,ny-1,z), vec + IND_mult(0,ny-2,z), nx*sizeof(TYPE));
+  } // z
+  memcpy(vec + IND_mult(0,0,nz-1), vec + IND_mult(0,0,nz-2), nx*ny*sizeof(TYPE));
+}
+
+inline void multMV_default(TYPE* result, SpMatrix mat, TYPE* vec) {
   TYPE localSum;
-  #pragma omp parallel private(localSum) if (ENABLE_PARALLEL)
+#pragma omp parallel private(localSum) if (ENABLE_PARALLEL)
   {
-    #pragma omp for nowait
+#pragma omp for nowait
     for (int i = 0; i < mat.nRows; i++) {
       localSum = 0.0;
       for (int j = mat.rowIndex[i]; j < mat.rowIndex[i + 1]; j++)
         localSum += mat.value[j] * vec[mat.col[j]];
-      (*result)[i] = localSum;
+      result[i] = localSum;
     }
   }
 }
 
-void sumV(TYPE **result, TYPE *U, TYPE *k1, TYPE *k2, TYPE *k3, TYPE *k4, size_t N, double h) {
+
+#if AVX2_RUN
+inline void multMV_AVX_1(TYPE* result, SpMatrix mat, TYPE* vec, int nx, int ny, int nz) {
+  TYPE * val = mat.value;
+  TYPE *vec2 = vec;
+
+  copyingBorders(vec, nx, ny, nz);
+
+  val += nx*ny * NR;   result += nx*ny;   vec2 += nx*ny;
+  for (int z = 1; z < nz - 1; z++) {
+    val += nx * NR;   result += nx;   vec2 += nx;
+    for (int y = 1; y < ny - 1; y++) {
+      val += 1 * NR;   result += 1;   vec2 += 1;
+      for (int x = 1; x < nx - 1; x += LENVEC) {
+
+        m_real vec4_z_l = mm_load(vec2 - nx*ny);
+        m_ind index4 = mm_set_epi32(0);
+        m_real val4 = mm_i32gather(val, index4);
+        m_real sum4 = _mm256_mul_pd(val4, vec4_z_l);
+
+        m_real vec4_y_l = mm_load(vec2 - nx);
+        index4 = mm_set_epi32(1);
+        val4 = mm_i32gather(val, index4);
+        sum4 = mm_fmadd(val4, vec4_y_l, sum4);
+
+        m_real vec4_x_l = mm_load(vec2 - 1);
+        index4 = mm_set_epi32(2);
+        val4 = mm_i32gather(val, index4);
+        sum4 = mm_fmadd(val4, vec4_x_l, sum4);
+
+        m_real vec4 = mm_load(vec2);
+        index4 = mm_set_epi32(3);
+        val4 = mm_i32gather(val, index4);
+        sum4 = mm_fmadd(val4, vec4, sum4);
+
+        m_real vec4_x_r = mm_load(vec2 + 1);
+        index4 = mm_set_epi32(4);
+        val4 = mm_i32gather(val, index4);
+        sum4 = mm_fmadd(val4, vec4_x_r, sum4);
+
+        m_real vec4_y_r = mm_load(vec2 + nx);
+        index4 = mm_set_epi32(5);
+        val4 = mm_i32gather(val, index4);
+        sum4 = mm_fmadd(val4, vec4_y_r, sum4);
+
+        m_real vec4_z_r = mm_load(vec2 + nx*ny);
+        index4 = mm_set_epi32(6);
+        val4 = mm_i32gather(val, index4);
+        sum4 = mm_fmadd(val4, vec4_z_r, sum4);
+        mm_stream(result, sum4);
+
+
+        val += LENVEC * NR;   result += LENVEC;   vec2 += LENVEC;
+      } // x
+      val += 1 * NR;   result += 1;   vec2 += 1;
+    } // y
+    val += nx * NR;   result += nx;   vec2 += nx;
+  } // z
+}
+
+inline void multMV_AVX_v2(TYPE* result, SpMatrix mat, TYPE* vec) {
+//    __m128i mask = _mm_setr_epi32(-1, -1, -1, 0);
+//  __m256d mask2 = _mm256_setr_pd(-1,-1,-1,0);
+//  __m256d zero =_mm256_setzero_pd();
+//  #pragma omp parallel for if (ENABLE_PARALLEL)
+  for (int row = 0; row < mat.nRows; row ++) {
+    m_ind v_col1 = mm_load_si(mat.col);
+    m_real v_val1 = mm_load(mat.value);
+    m_real v_vec1 = mm_i32gather(vec, v_col1);
+
+    m_real rowsum = mm_mul(v_vec1, v_val1);
+
+#ifdef DOUBLE_TYPE
+//    __m128i v_col2 = _mm_maskload_epi32(mat.col+4, mask);
+    m_ind v_col2 = mm_load_si(mat.col+LENVEC);
+    m_real v_val2 = mm_load(mat.value+LENVEC);
+    m_real v_vec2 = mm_i32gather(vec, v_col2);
+//    __m256d v_vec2 = _mm256_mask_i32gather_pd(zero, vec, v_col2, mask2, 8);
+    rowsum = mm_fmadd(v_vec2, v_val2, rowsum);
+    rowsum = mm_hadd(rowsum, rowsum);
+#endif
+    result[row] = ((TYPE*)&rowsum)[0] + ((TYPE*)&rowsum)[2];
+#ifdef FLOAT_TYPE
+    result[row] += ((TYPE*)&rowsum)[4] + ((TYPE*)&rowsum)[6];
+#endif
+    mat.value += NR;
+    mat.col += NR;
+  }
+}
+#endif
+
+# define multMV_mkl_f(result, mat, vec)                                                 \
+  mkl_cspblas_scsrgemv("N", &mat.nRows, mat.value, mat.rowIndex, mat.col, vec, result); \
+
+# define multMV_mkl_d(result, mat, vec)                                                 \
+  mkl_cspblas_dcsrgemv("N", &mat.nRows, mat.value, mat.rowIndex, mat.col, vec, result); \
+
+
+void multMV(TYPE* result, SpMatrix mat, TYPE* vec, int nx, int ny, int nz) {
+#if MKL_RUN
+  #if defined(FLOAT_TYPE)
+    multMV_mkl_f(result, mat, vec);
+  #elif defined(DOUBLE_TYPE)
+    multMV_mkl_d(result, mat, vec);
+  #endif
+#elif AVX2_RUN
+  multMV_AVX_1(result,mat, vec, nx, ny, nz);
+#else
+  multMV_default(result, mat, vec);
+#endif
+}
+
+void sumV(TYPE **result, TYPE *U, TYPE *k1, TYPE *k2, TYPE *k3, TYPE *k4, int N, TYPE h) {
   #pragma omp parallel for if (ENABLE_PARALLEL)
   for (int i = 0; i < N; i++)
     (*result)[i] = U[i] + h*(k1[i] + 2.0*k2[i] + 2.0*k3[i] + k4[i]);
@@ -63,8 +188,8 @@ TYPE procedure(SpMatrix mat, int i, int j) {
   return result;
 }
 
-void denseMult(double **result, double **mat, double *vec, size_t dim) {
-  memset(*result, 0, dim*sizeof(double));
+void denseMult(TYPE **result, TYPE **mat, TYPE *vec, int dim) {
+  memset(*result, 0, dim*sizeof(TYPE));
   for (int x = 0; x < dim; x++) {
     for (int i = 0;i < dim;i++)
       (*result)[x]+=mat[x][i]*vec[i];
@@ -145,7 +270,11 @@ void createExplicitSpMat(SpMatrix *mat, TYPE coeffs[4], int dim, int NX, int NXY
     index++;
     // ***************************************
 
-    mat->rowIndex[i + 1] = mat->rowIndex[i] + 7;
+//    mat->col[index] = 0;
+//    mat->value[index] = 0.0;
+//    index++;
+
+    mat->rowIndex[i + 1] = mat->rowIndex[i] + NR;
   }
 }
 
@@ -231,8 +360,12 @@ void createExplicitSpMatV2(SpMatrix *mat, TYPE coeffs[4], int nx, int ny, int nz
         mat->value[index] = coeffs[3];
         index++;
 
+//        mat->col[index] = 0;
+//        mat->value[index] = 0.0;
+//        index++;
+
         k++;
-        mat->rowIndex[k] = mat->rowIndex[k-1] + 7;
+        mat->rowIndex[k] = mat->rowIndex[k-1] + NR ;
 
       }
 
