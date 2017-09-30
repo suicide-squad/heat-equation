@@ -9,7 +9,7 @@
 
 #include <sys/utsname.h>
 
-#include "sp_mat.h"
+#include "kernel.h"
 #include "parser.h"
 #include "sgpu.h"
 #include "ts.h"
@@ -252,16 +252,16 @@ int main(int argc, char **argv) {
                  gridComm, &status[3]);
 
     // k1 = A*U
-    multMV(k1, A, u_chunk);
+    multMV(k1, A, u_chunk, 0,0,0);
 
     // k2 = B*k1
-    multMV(k2, B, k1);
+    multMV(k2, B, k1, 0,0,0);
 
     // k3 = B*k2
-    multMV(k3, B, k2);
+    multMV(k3, B, k2, 0,0,0);
 
     // k4 = C*k3
-    multMV(k4, C, k3);
+    multMV(k4, C, k3, 0,0,0);
 
     // UNext = U + (k1 + k2*2 + k3*2 + k4)*h;
     sumV(&un_chunk, u_chunk, k1, k2, k3, k4, dimChunk, h);

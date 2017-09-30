@@ -3,9 +3,9 @@
 #include <string.h>
 
 #include <mpi.h>
-#include <sp_mat.h>
+#include <kernel.h>
 
-#include "sp_mat.h"
+#define IND_mult(x,y,z) ((x) + (y)*nx + (z)*ny*nx)
 
 void initSpMat(SpMatrix *mat, int nz, int nRows) {
   mat->nz = nz;
@@ -19,6 +19,19 @@ void freeSpMat(SpMatrix* mat) {
   free(mat->value);
   free(mat->col);
   free(mat->rowIndex);
+}
+
+inline void copyingBorders(TYPE* vec, int nx, int ny, int nz) {
+  memcpy(vec + IND_mult(0,0,0), vec + IND_mult(0,0,1), nx*ny*sizeof(TYPE));
+  for (int z = 1; z < nz-1; z++) {
+    memcpy(vec + IND_mult(0,0,z), vec + IND_mult(0,1,z), nx*sizeof(TYPE));
+    for (int y = 1; y < ny-1; y++) {
+      vec[IND_mult(0,y,z)] = vec[IND_mult(1,y,z)];
+      vec[IND_mult(nx-1,y,z)] = vec[IND_mult(nx-2,y,z)];
+    } // y
+    memcpy(vec + IND_mult(0,ny-1,z), vec + IND_mult(0,ny-2,z), nx*sizeof(TYPE));
+  } // z
+  memcpy(vec + IND_mult(0,0,nz-1), vec + IND_mult(0,0,nz-2), nx*ny*sizeof(TYPE));
 }
 
 inline void multMV_default(TYPE* result, SpMatrix mat, TYPE* vec) {
@@ -35,30 +48,20 @@ inline void multMV_default(TYPE* result, SpMatrix mat, TYPE* vec) {
   }
 }
 
-#define IND_mult(x,y,z) ((x) + (y)*nx + (z)*ny*nx)
 
-
+#if AVX2_RUN
 inline void multMV_AVX_1(TYPE* result, SpMatrix mat, TYPE* vec, int nx, int ny, int nz) {
   TYPE * val = mat.value;
   TYPE *vec2 = vec;
 
-  memcpy(vec + IND_mult(0,0,0), vec + IND_mult(0,0,1), nx*ny*sizeof(TYPE));
-  for (int z = 1; z < nz-1; z++) {
-    memcpy(vec + IND_mult(0,0,z), vec + IND_mult(0,1,z), nx*sizeof(TYPE));
-    for (int y = 1; y < ny-1; y++) {
-        vec[IND_mult(0,y,z)] = vec[IND_mult(1,y,z)];
-        vec[IND_mult(nx-1,y,z)] = vec[IND_mult(nx-2,y,z)];
-    } // y
-    memcpy(vec + IND_mult(0,ny-1,z), vec + IND_mult(0,ny-2,z), nx*sizeof(TYPE));
-  } // z
-  memcpy(vec + IND_mult(0,0,nz-1), vec + IND_mult(0,0,nz-2), nx*ny*sizeof(TYPE));
+  copyingBorders(vec, nx, ny, nz);
 
   val += nx*ny * NR;   result += nx*ny;   vec2 += nx*ny;
   for (int z = 1; z < nz - 1; z++) {
     val += nx * NR;   result += nx;   vec2 += nx;
     for (int y = 1; y < ny - 1; y++) {
       val += 1 * NR;   result += 1;   vec2 += 1;
-      for (int x = 1; x < nx - 1; x +=4) {
+      for (int x = 1; x < nx - 1; x += LENVEC) {
 
         m_real vec4_z_l = mm_load(vec2 - nx*ny);
         m_ind index4 = mm_set_epi32(0);
@@ -134,6 +137,7 @@ inline void multMV_AVX_v2(TYPE* result, SpMatrix mat, TYPE* vec) {
     mat.col += NR;
   }
 }
+#endif
 
 # define multMV_mkl_f(result, mat, vec)                                                 \
   mkl_cspblas_scsrgemv("N", &mat.nRows, mat.value, mat.rowIndex, mat.col, vec, result); \
@@ -143,13 +147,13 @@ inline void multMV_AVX_v2(TYPE* result, SpMatrix mat, TYPE* vec) {
 
 
 void multMV(TYPE* result, SpMatrix mat, TYPE* vec, int nx, int ny, int nz) {
-#if defined(MKL_RUN)
+#if MKL_RUN
   #if defined(FLOAT_TYPE)
     multMV_mkl_f(result, mat, vec);
   #elif defined(DOUBLE_TYPE)
     multMV_mkl_d(result, mat, vec);
   #endif
-#elif defined(AVX2_RUN)
+#elif AVX2_RUN
   multMV_AVX_1(result,mat, vec, nx, ny, nz);
 #else
   multMV_default(result, mat, vec);

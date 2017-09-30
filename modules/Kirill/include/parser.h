@@ -7,8 +7,8 @@
 
 #include "ts.h"
 
-#define OK 0
-#define NO_FILE 100
+#define OK            0
+#define NO_FILE       100
 #define READING_ERROR 101
 
 typedef struct {

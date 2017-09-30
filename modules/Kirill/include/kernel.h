@@ -10,10 +10,6 @@
 #include <omp.h>
 #include <mpi.h>
 
-#ifdef MKL_RUN
-  #include <mkl.h>
-#endif
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -29,6 +25,8 @@ typedef struct {
 
 void initSpMat(SpMatrix* mat, int nz, int nRows);
 void freeSpMat(SpMatrix* mat);
+
+void copyingBorders(TYPE* vec, int nx, int ny, int nz);
 
 // Умножение разреженной матрицы на вектор
 void multMV(TYPE* result, SpMatrix mat, TYPE* vec, int nx, int ny, int nz);

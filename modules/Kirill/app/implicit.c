@@ -12,7 +12,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#include "sp_mat.h"
+#include "kernel.h"
 #include "parser.h"
 #include "ts.h"
 
@@ -110,7 +110,7 @@ int main() {
     memcpy(x1, u, dim*sizeof(TYPE));
 
     do {
-      multMV(x2, mat, x1);
+      multMV(x2, mat, x1,0,0,0);
 
 
       for (int z = 1; z < NZ-1; z++) {
