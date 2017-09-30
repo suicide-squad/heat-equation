@@ -12,16 +12,16 @@
 #define NR 7
 
 //  Load settings
-#define ENABLE_PARALLEL 0
-#define AVX2_RUN        1
-#define MKL_RUN         0
+#define ENABLE_PARALLEL ${THREAD_RUN}
+#define AVX2_RUN        ${AVX2_RUN}
+#define MKL_RUN         ${MKL_RUN}
 
-#define DOUBLE_TYPE
+#define ${TYPE}_TYPE
 
 // Load paths
-#define INPUT_EULER_SETTING_PATH    "/home/kirill/projects/heat-equation/initial/setting3.ini"
-#define INPUT_EULER_FUNCTION_PATH   "/home/kirill/projects/heat-equation/initial/function3.txt"
-#define RESULT_EULER_PATH           "/home/kirill/projects/heat-equation/result/Kirill/euler3D_double_avx.txt"
+#define INPUT_EULER_SETTING_PATH    "${INPUT_EULER_SETTING_PATH}"
+#define INPUT_EULER_FUNCTION_PATH   "${INPUT_EULER_FUNCTION_PATH}"
+#define RESULT_EULER_PATH           "${RESULT_EULER_PATH}"
 
 #if AVX2_RUN
 #include <immintrin.h>

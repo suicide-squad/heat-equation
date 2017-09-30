@@ -18,9 +18,6 @@ include_directories( ${MPI_INCLUDE_PATH} )
 
 find_library(M_LIB m)
 
-set(MKL_RUN FALSE)
-set(AVX2_RUN 1)
-
 add_subdirectory(modules)
 
 

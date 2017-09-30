@@ -96,7 +96,7 @@ set(CMAKE_REQUIRED_FLAGS)
 
 if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     if(DETECTED_AVX_20)
-        SET(AVX_FLAGS "${AVX_FLAGS} -mavx2")
+        SET(AVX_FLAGS "${AVX_FLAGS} -mavx2 -march=nehalem")
         set(AVX_VERSION "2.0")
         set(AVX_STR "2_0")
         SET(AVX_FOUND 1)
