@@ -108,6 +108,55 @@ inline void multMV_AVX_1(TYPE* result, SpMatrix mat, TYPE* vec, int nx, int ny, 
   } // z
 }
 
+inline void multMV_AVX_2(TYPE* result, SpMatrix mat, TYPE* vec, int nx, int ny, int nz, TYPE* coeff) {
+  TYPE * val = mat.value;
+  TYPE *vec2 = vec;
+
+  m_real val41 = mm_set1(coeff[0]);
+  m_real val42 = mm_set1(coeff[1]);
+  m_real val43 = mm_set1(coeff[2]);
+  m_real val44 = mm_set1(coeff[3]);
+
+  copyingBorders(vec, nx, ny, nz);
+
+  val += nx*ny * NR;   result += nx*ny;   vec2 += nx*ny;
+  for (int z = 1; z < nz - 1; z++) {
+    val += nx * NR;   result += nx;   vec2 += nx;
+    for (int y = 1; y < ny - 1; y++) {
+      val += 1 * NR;   result += 1;   vec2 += 1;
+      for (int x = 1; x < nx - 1; x += LENVEC) {
+
+        m_real vec4_z_l = mm_load(vec2 - nx*ny);
+        m_real sum4 = _mm256_mul_pd(val44, vec4_z_l);
+
+        m_real vec4_y_l = mm_load(vec2 - nx);
+        sum4 = mm_fmadd(val43, vec4_y_l, sum4);
+
+        m_real vec4_x_l = mm_load(vec2 - 1);
+        sum4 = mm_fmadd(val42, vec4_x_l, sum4);
+
+        m_real vec4 = mm_load(vec2);
+        sum4 = mm_fmadd(val41, vec4, sum4);
+
+        m_real vec4_x_r = mm_load(vec2 + 1);
+        sum4 = mm_fmadd(val42, vec4_x_r, sum4);
+
+        m_real vec4_y_r = mm_load(vec2 + nx);
+        sum4 = mm_fmadd(val43, vec4_y_r, sum4);
+
+        m_real vec4_z_r = mm_load(vec2 + nx*ny);
+        sum4 = mm_fmadd(val44, vec4_z_r, sum4);
+        mm_stream(result, sum4);
+
+
+        val += LENVEC * NR;   result += LENVEC;   vec2 += LENVEC;
+      } // x
+      val += 1 * NR;   result += 1;   vec2 += 1;
+    } // y
+    val += nx * NR;   result += nx;   vec2 += nx;
+  } // z
+}
+
 inline void multMV_AVX_v2(TYPE* result, SpMatrix mat, TYPE* vec) {
 //    __m128i mask = _mm_setr_epi32(-1, -1, -1, 0);
 //  __m256d mask2 = _mm256_setr_pd(-1,-1,-1,0);
@@ -146,7 +195,7 @@ inline void multMV_AVX_v2(TYPE* result, SpMatrix mat, TYPE* vec) {
   mkl_cspblas_dcsrgemv("N", &mat.nRows, mat.value, mat.rowIndex, mat.col, vec, result); \
 
 
-void multMV(TYPE* result, SpMatrix mat, TYPE* vec, int nx, int ny, int nz) {
+void multMV(TYPE* result, SpMatrix mat, TYPE* vec, int nx, int ny, int nz, TYPE* coeff) {
 #if MKL_RUN
   #if defined(FLOAT_TYPE)
     multMV_mkl_f(result, mat, vec);
@@ -154,7 +203,7 @@ void multMV(TYPE* result, SpMatrix mat, TYPE* vec, int nx, int ny, int nz) {
     multMV_mkl_d(result, mat, vec);
   #endif
 #elif AVX2_RUN
-  multMV_AVX_1(result,mat, vec, nx, ny, nz);
+  multMV_AVX_2(result,mat, vec, nx, ny, nz, coeff);
 #else
   multMV_default(result, mat, vec);
 #endif
