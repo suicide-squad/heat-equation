@@ -4,6 +4,11 @@ COMPILER=$1
 BUILD=$2
 
 Build() {
+    export ALTERAOCLSDKROOT=/opt/intelFPGA_pro/17.0/hld
+    export PATH=$PATH:$ALTERAOCLSDKROOT/bin
+    export AOCL_BOARD_PACKAGE_ROOT=/opt/intelFPGA_pro/17.0/hld/board/a10soc
+    export LD_LIBRARY_PATH=$AOCL_BOARD_PACKAGE_ROOT/linux64/lib:$ALTERAOCLSDKROOT/linux64/lib:$ALTERAOCLSDKROOT/host/linux64/lib
+
     C_COMPILER="gcc"
     CXX_COMPILER="g++"
     TYPE_BUILD=Release
@@ -43,4 +48,13 @@ if [ "$3" = "clear" ]; then
 #    echo "finish clear directory"
 fi
 
+BuildAltera() {
+
+
+    cd _build/modules/Kirill/src
+    aoc -march=emulator kernel.cl -o ./kernel.aocx --board a10soc --profile
+#    CL_CONTEXT_EMULATOR_DEVICE_ALTERA=1 ./Hello
+}
+
 Build
+BuildAltera

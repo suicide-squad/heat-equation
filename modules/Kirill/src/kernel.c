@@ -108,6 +108,7 @@ inline void multMV_AVX_1(TYPE* result, SpMatrix mat, TYPE* vec, int nx, int ny, 
   } // z
 }
 
+
 inline void multMV_AVX_2(TYPE* result, SpMatrix mat, TYPE* vec, int nx, int ny, int nz, TYPE* coeff) {
   TYPE * val = mat.value;
   TYPE *vec2 = vec;
@@ -188,22 +189,90 @@ inline void multMV_AVX_v2(TYPE* result, SpMatrix mat, TYPE* vec) {
 }
 #endif
 
-# define multMV_mkl_f(result, mat, vec)                                                 \
-  mkl_cspblas_scsrgemv("N", &mat.nRows, mat.value, mat.rowIndex, mat.col, vec, result); \
+# define multMV_mklf(result, mat, vec)  mkl_cspblas_scsrgemv("N", &mat.nRows, mat.value, mat.rowIndex, mat.col, vec, result);
+# define multMV_mkld(result, mat, vec) mkl_cspblas_dcsrgemv("N", &mat.nRows, mat.value, mat.rowIndex, mat.col, vec, result);
 
-# define multMV_mkl_d(result, mat, vec)                                                 \
-  mkl_cspblas_dcsrgemv("N", &mat.nRows, mat.value, mat.rowIndex, mat.col, vec, result); \
+#if ALTERA_RUN
+void multMV_altera(TYPE* result, SpMatrix mat, TYPE* vec) {
+  // execution model
+  cl_context context = 0;
+  cl_command_queue commandQueue = 0;
 
+  // platform model
+  cl_program program = 0;
+  cl_device_id device = 0;
+
+  // programming model
+  cl_kernel kernel = 0;
+
+  context = createContext();
+
+  // create a command queue on first available device in created context
+  commandQueue = createCommandQueue(context, &device);
+
+  // create opencl program from .cl kernel source
+  program = createProgram(context, device, "../src/kernel.aocx");
+
+  // create opencl kernel
+  kernel = clCreateKernel(program, "csr_mult", NULL);
+
+  cl_int err;
+  cl_mem memResult = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(TYPE)*mat.nRows, NULL, &err);
+  checkError(err,"memResult");
+  cl_mem memVec = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(TYPE)*mat.nRows, vec, &err);
+  checkError(err,"memVec");
+  cl_mem memCols = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(int)*mat.nz, mat.col, &err);
+  checkError(err,"memCols");
+  cl_mem memValue = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(TYPE)*mat.nz, mat.value, &err);
+  checkError(err,"memValue");
+  cl_mem memRowIndex = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(int)*(mat.nRows+1), mat.rowIndex, &err);
+  checkError(err,"memRowIndex");
+
+  err = clSetKernelArg(kernel, 0, sizeof(int), &mat.nRows);
+  err |= clSetKernelArg(kernel, 1, sizeof(cl_mem), &memRowIndex);
+  err |= clSetKernelArg(kernel, 2, sizeof(cl_mem), &memCols);
+  err |= clSetKernelArg(kernel, 3, sizeof(cl_mem), &memValue);
+  err |= clSetKernelArg(kernel, 4, sizeof(cl_mem), &memVec);
+  err |= clSetKernelArg(kernel, 5, sizeof(cl_mem), &memResult);
+  checkError(err,"clSetKernelArg");
+
+  size_t globalWorkSize[1] = {mat.nRows};
+  size_t max_wg_size, num_wg_sizes = 0;
+  err = clGetKernelWorkGroupInfo(kernel, device, CL_KERNEL_WORK_GROUP_SIZE, sizeof(size_t), (void *) &max_wg_size, NULL);
+  size_t *wg_size = default_wg_sizes(&num_wg_sizes,max_wg_size, globalWorkSize);
+//  fprintf(stdout, "wrk sizez: %lu %lu %lu\n", max_wg_size, wg_size[0], globalWorkSize[0]);
+
+  err = clEnqueueNDRangeKernel(commandQueue, kernel, 1, NULL, globalWorkSize, wg_size, 0, NULL, NULL);
+  checkError(err, "ERROR: 1  clEnqueueNDRangeKernel() failed");
+  clFinish(commandQueue);
+
+  err = clEnqueueReadBuffer(commandQueue, memResult, 1, 0, sizeof(TYPE)*mat.nRows, result, 0, NULL, NULL);
+  checkError(err,  "clEnqueueReadBuffer: out");
+  clFinish(commandQueue);
+//  cleanup(context, commandQueue, program, kernel);
+  clReleaseMemObject(memResult);
+  clReleaseMemObject(memVec);
+  clReleaseMemObject(memCols);
+  clReleaseMemObject(memValue);
+  clReleaseMemObject(memRowIndex);
+  clReleaseKernel(kernel);
+  clReleaseProgram(program);
+  clReleaseCommandQueue(commandQueue);
+  clReleaseContext(context);
+}
+#endif
 
 void multMV(TYPE* result, SpMatrix mat, TYPE* vec, int nx, int ny, int nz, TYPE* coeff) {
 #if MKL_RUN
-  #if defined(FLOAT_TYPE)
-    multMV_mkl_f(result, mat, vec);
-  #elif defined(DOUBLE_TYPE)
-    multMV_mkl_d(result, mat, vec);
+  #if defined(DOUBLE_TYPE)
+      multMV_mkld(result, mat, vec);
+  #elif defined(FLOAT_TYPE)
+    multMV_mklf(result, mat, vec);
   #endif
 #elif AVX2_RUN
-  multMV_AVX_2(result,mat, vec, nx, ny, nz, coeff);
+  multMV_AVX_1(result,mat, vec, nx, ny, nz);
+#elif ALTERA_RUN
+  multMV_altera(result, mat, vec);
 #else
   multMV_default(result, mat, vec);
 #endif
