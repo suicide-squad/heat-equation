@@ -6,7 +6,8 @@
 #include <stdlib.h>
 #include <mpi.h>
 
-#include "kernel.h"
+#include "multMV.h"
+#include "createSpMat.h"
 #include "parser.h"
 #include "sgpu.h"
 
@@ -151,6 +152,13 @@ int main(int argc, char **argv) {
     printf("START!\n");
     t0 = MPI_Wtime();
   }
+#if ALTERA_RUN
+  multMV_altera(un_chunk, mat, u_chunk, 1);
+  tmp = u_chunk;
+  u_chunk = un_chunk;
+  un_chunk = tmp;
+#else
+
   // ОСНОВНЫЕ ВЫЧИСЛЕНИЯ
   for (int t = 1; t <= sizeTime; t++) {
     //  ОБМЕН ГРАНИЦ ПО Y И Z
@@ -171,14 +179,15 @@ int main(int argc, char **argv) {
     MPI_Sendrecv(&u_chunk[IND(0, 0, NZr)], 1, planeXZ, rank_top, 3,
                  &u_chunk[IND(0, 0, 0)], 1, planeXZ, rank_down, 3, gridComm, &status[3]);
 
-    multMV(un_chunk, mat, u_chunk, NX, (NYr+RESERVE), (NZr+RESERVE), coeffs);
 
+    multMV(un_chunk, mat, u_chunk, NX, (NYr+RESERVE), (NZr+RESERVE), coeffs);
     tmp = u_chunk;
     u_chunk = un_chunk;
     un_chunk = tmp;
 
   }
   //  *******************
+#endif
 
   if (rankP == ROOT) {
     printf("FINISH!\n\n");

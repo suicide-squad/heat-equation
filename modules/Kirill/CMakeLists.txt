@@ -11,12 +11,12 @@ set(TYPE        DOUBLE)
 set(MKL_RUN     0)
 set(AVX2_RUN    0)
 set(THREAD_RUN  0)
-set(ALTERA_RUN  0)
+set(ALTERA_RUN  1)
 
 #   Setting paths
 set(INPUT_EULER_SETTING_PATH    "${CMAKE_SOURCE_DIR}/initial/setting3.ini")
 set(INPUT_EULER_FUNCTION_PATH   "${CMAKE_SOURCE_DIR}/initial/function3_8.txt")
-set(RESULT_EULER_PATH           "${CMAKE_SOURCE_DIR}/result/Kirill/euler3D_double_1_8.txt")
+set(RESULT_EULER_PATH           "${CMAKE_SOURCE_DIR}/result/Kirill/euler3D_double_fpga_1_8.txt")
 #
 
 # find AVX
@@ -42,10 +42,7 @@ find_package(OpenCL)
 find_package(AlteraCL)
 include_directories(${OpenCL_INCLUDE_DIRS})
 
-configure_file(
-    "${CMAKE_CURRENT_LIST_DIR}/include/ts.h.in"
-    "${CMAKE_CURRENT_LIST_DIR}/include/ts.h"
-)
+configure_file("include/utils/ts.h.in" "${CMAKE_CURRENT_LIST_DIR}/include/utils/ts.h")
 
 add_subdirectory(src)
 add_subdirectory(app)

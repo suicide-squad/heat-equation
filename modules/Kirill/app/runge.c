@@ -9,10 +9,12 @@
 
 #include <sys/utsname.h>
 
-#include "kernel.h"
+#include "multMV.h"
 #include "parser.h"
 #include "sgpu.h"
-#include "ts.h"
+#include "createSpMat.h"
+
+#include "utils/ts.h"
 
 #define DIM_CART 2
 #define SHIFT 4

@@ -3,7 +3,7 @@
 //
 
 
-#include "opencl.h"
+#include "utils/opencl.h"
 
 cl_context createContext(void) {
 //  выбрана первая платформа

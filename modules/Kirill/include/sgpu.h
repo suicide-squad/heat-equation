@@ -5,7 +5,7 @@
 #ifndef HEAT_EQUATION_SGPU_H
 #define HEAT_EQUATION_SGPU_H
 
-#include "ts.h"
+#include "utils/ts.h"
 
 typedef enum {
   Y_RIGHT_SEND,
