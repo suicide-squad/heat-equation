@@ -34,11 +34,11 @@ inline void copyingBorders(TYPE* vec, int nx, int ny, int nz) {
   memcpy(vec + IND_mult(0,0,nz-1), vec + IND_mult(0,0,nz-2), nx*ny*sizeof(TYPE));
 }
 
-inline void multMV_default(TYPE* result, SpMatrix mat, TYPE* vec) {
+void multMV_default(TYPE* result, SpMatrix mat, TYPE* vec) {
   TYPE localSum;
-#pragma omp parallel private(localSum) if (ENABLE_PARALLEL)
+  #pragma omp parallel private(localSum) if (ENABLE_PARALLEL)
   {
-#pragma omp for nowait
+    #pragma omp for nowait
     for (int i = 0; i < mat.nRows; i++) {
       localSum = 0.0;
       for (int j = mat.rowIndex[i]; j < mat.rowIndex[i + 1]; j++)
@@ -47,7 +47,6 @@ inline void multMV_default(TYPE* result, SpMatrix mat, TYPE* vec) {
     }
   }
 }
-
 
 #if AVX2_RUN
 inline void multMV_AVX_1(TYPE* result, SpMatrix mat, TYPE* vec, int nx, int ny, int nz) {
@@ -109,7 +108,7 @@ inline void multMV_AVX_1(TYPE* result, SpMatrix mat, TYPE* vec, int nx, int ny, 
 }
 
 
-inline void multMV_AVX_2(TYPE* result, SpMatrix mat, TYPE* vec, int nx, int ny, int nz, TYPE* coeff) {
+inline void multMV_AVX_optimize(TYPE* result, SpMatrix mat, TYPE* vec, int nx, int ny, int nz, TYPE* coeff) {
   TYPE * val = mat.value;
   TYPE *vec2 = vec;
 
@@ -158,42 +157,12 @@ inline void multMV_AVX_2(TYPE* result, SpMatrix mat, TYPE* vec, int nx, int ny, 
   } // z
 }
 
-inline void multMV_AVX_v2(TYPE* result, SpMatrix mat, TYPE* vec) {
-//    __m128i mask = _mm_setr_epi32(-1, -1, -1, 0);
-//  __m256d mask2 = _mm256_setr_pd(-1,-1,-1,0);
-//  __m256d zero =_mm256_setzero_pd();
-//  #pragma omp parallel for if (ENABLE_PARALLEL)
-  for (int row = 0; row < mat.nRows; row ++) {
-    m_ind v_col1 = mm_load_si(mat.col);
-    m_real v_val1 = mm_load(mat.value);
-    m_real v_vec1 = mm_i32gather(vec, v_col1);
-
-    m_real rowsum = mm_mul(v_vec1, v_val1);
-
-#ifdef DOUBLE_TYPE
-//    __m128i v_col2 = _mm_maskload_epi32(mat.col+4, mask);
-    m_ind v_col2 = mm_load_si(mat.col+LENVEC);
-    m_real v_val2 = mm_load(mat.value+LENVEC);
-    m_real v_vec2 = mm_i32gather(vec, v_col2);
-//    __m256d v_vec2 = _mm256_mask_i32gather_pd(zero, vec, v_col2, mask2, 8);
-    rowsum = mm_fmadd(v_vec2, v_val2, rowsum);
-    rowsum = mm_hadd(rowsum, rowsum);
-#endif
-    result[row] = ((TYPE*)&rowsum)[0] + ((TYPE*)&rowsum)[2];
-#ifdef FLOAT_TYPE
-    result[row] += ((TYPE*)&rowsum)[4] + ((TYPE*)&rowsum)[6];
-#endif
-    mat.value += NR;
-    mat.col += NR;
-  }
-}
 #endif
 
 # define multMV_mklf(result, mat, vec)  mkl_cspblas_scsrgemv("N", &mat.nRows, mat.value, mat.rowIndex, mat.col, vec, result);
 # define multMV_mkld(result, mat, vec) mkl_cspblas_dcsrgemv("N", &mat.nRows, mat.value, mat.rowIndex, mat.col, vec, result);
 
-#if ALTERA_RUN
-
+#if FPGA_RUN || CPUGPU_RUN
 
 void multMV_altera(TYPE* result, SpMatrix mat, TYPE* vec, int sizeTime ) {
   cl_context context = 0;
@@ -204,8 +173,9 @@ void multMV_altera(TYPE* result, SpMatrix mat, TYPE* vec, int sizeTime ) {
 
   context = createContext();
   commandQueue = createCommandQueue(context, &device);
-  program = createProgram(context, device, "../src/kernel.aocx");
+  program = createProgram(context, device);
   kernel = clCreateKernel(program, "csr_mult", NULL);
+
   cl_int err;
   cl_mem memResult = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(TYPE)*mat.nRows, NULL, &err);
   checkError(err,"memResult");
@@ -233,13 +203,21 @@ void multMV_altera(TYPE* result, SpMatrix mat, TYPE* vec, int sizeTime ) {
   checkError(err, "ERROR: clGetKernelWorkGroupInfo failed");
 
   size_t *wg_size = default_wg_sizes(&num_wg_sizes,max_wg_size, globalWorkSize);
-//  fprintf(stdout, "wrk sizez: %lu %lu %lu\n", max_wg_size, wg_size[0], globalWorkSize[0]);
+  fprintf(stdout, "wrk sizez: %lu %lu %lu\n", max_wg_size, wg_size[0], globalWorkSize[0]);
 
-  err = clEnqueueNDRangeKernel(commandQueue, kernel, 1, NULL, globalWorkSize, wg_size, 0, NULL, NULL);
-  checkError(err, "ERROR: clEnqueueNDRangeKernel() failed");
+  cl_mem tmp;
+  for (int i = 0; i < sizeTime; i++) {
+    err = clEnqueueNDRangeKernel(commandQueue, kernel, 1, NULL, globalWorkSize, wg_size, 0, NULL, NULL);
+
+    tmp = memVec;
+    memVec = memResult;
+    memResult = tmp;
+    clSetKernelArg(kernel, 4, sizeof(cl_mem), &memVec);
+    clSetKernelArg(kernel, 5, sizeof(cl_mem), &memResult);
+  }
   clFinish(commandQueue);
 
-  err = clEnqueueReadBuffer(commandQueue, memResult, CL_TRUE, 0, sizeof(TYPE)*mat.nRows, result, 0, NULL, NULL);
+  err = clEnqueueReadBuffer(commandQueue, memVec, CL_TRUE, 0, sizeof(TYPE)*mat.nRows, result, 0, NULL, NULL);
   checkError(err,  "clEnqueueReadBuffer: out");
   clFinish(commandQueue);
 
@@ -266,9 +244,9 @@ void multMV(TYPE* result, SpMatrix mat, TYPE* vec, int nx, int ny, int nz, TYPE*
   #endif
 #elif AVX2_RUN
 //  multMV_AVX_1(result,mat, vec, nx, ny, nz);
-  multMV_AVX_2(result,mat, vec, nx, ny, nz,coeff);
-  multMV_default(result, mat, vec);
+  multMV_AVX_optimize(result,mat, vec, nx, ny, nz, coeff);
 #endif
+  multMV_default(result, mat, vec);
 }
 
 void sumV(TYPE **result, TYPE *U, TYPE *k1, TYPE *k2, TYPE *k3, TYPE *k4, int N, TYPE h) {

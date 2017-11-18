@@ -8,39 +8,46 @@ set(APP         "app_${MODULE}")
 set(LIBRARY     "lib_${MODULE}")
 
 set(TYPE        DOUBLE)
+set(THREAD_RUN  0)
 set(MKL_RUN     0)
 set(AVX2_RUN    0)
-set(THREAD_RUN  0)
-set(ALTERA_RUN  1)
+set(FPGA_RUN 	0)
+set(CPUGPU_RUN  0)
 
 #   Setting paths
 set(INPUT_EULER_SETTING_PATH    "${CMAKE_SOURCE_DIR}/initial/setting3.ini")
-set(INPUT_EULER_FUNCTION_PATH   "${CMAKE_SOURCE_DIR}/initial/function3_8.txt")
-set(RESULT_EULER_PATH           "${CMAKE_SOURCE_DIR}/result/Kirill/euler3D_double_fpga_1_8.txt")
+set(INPUT_EULER_FUNCTION_PATH   "${CMAKE_SOURCE_DIR}/initial/function3.txt")
+set(RESULT_EULER_PATH           "${CMAKE_SOURCE_DIR}/result/Kirill/euler3D_double_fpga_64.txt")
+
+if(${FPGA_RUN})
+	set(KERNEL_CL_PATH    		"${CMAKE_BINARY_DIR}/modules/Kirill/src/kernel.aocx")
+elseif(${CPUGPU_RUN})
+	set(KERNEL_CL_PATH    		"${CMAKE_BINARY_DIR}/modules/Kirill/src/kernel.cl")
+endif()
 #
 
-# find AVX
 find_package(AVX)
+find_package(MKL)
+if(${CPUGPU_RUN})
+	find_package(OpenCL)
+elseif(${FPGA_RUN})
+	find_package(AlteraCL)
+endif()
+
 if(${AVX2_RUN} AND AVX_FOUND)
     set(AVX2_RUN, 1)
     message(STATUS "AVX2 RUN")
-else()
+elseif(${MKL_RUN} AND MKL_FOUND)
     set(AVX2_RUN, 0)
-endif()
-
-# find MKL
-find_package(MKL)
-if(${MKL_RUN} AND ${MKL_FOUND})
     set(MKL_RUN, 1)
     message(STATUS "MKL RUN")
-else()
+elseif(${CPUGPU_RUN} AND OPENCL_FOUND)
     set(MKL_RUN, 0)
+	set(CPUGPU_RUN, 1)
+	message(STATUS "CPUGPU_RUN")
+else()
+	set(CPUGPU_RUN, 0)
 endif()
-
-#find OpencL & AlteraCL
-find_package(OpenCL)
-find_package(AlteraCL)
-include_directories(${OpenCL_INCLUDE_DIRS})
 
 configure_file("include/utils/ts.h.in" "${CMAKE_CURRENT_LIST_DIR}/include/utils/ts.h")
 

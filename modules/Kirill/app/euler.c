@@ -152,8 +152,8 @@ int main(int argc, char **argv) {
     printf("START!\n");
     t0 = MPI_Wtime();
   }
-#if ALTERA_RUN
-  multMV_altera(un_chunk, mat, u_chunk, 1);
+#if FPGA_RUN || CPUGPU_RUN
+  multMV_altera(un_chunk, mat, u_chunk, sizeTime);
   tmp = u_chunk;
   u_chunk = un_chunk;
   un_chunk = tmp;

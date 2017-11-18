@@ -22,12 +22,15 @@ cl_context createContext(void) {
 //  Получения num доступных платформ
   cl_platform_id* platformsId = (cl_platform_id*)malloc(sizeof(cl_platform_id)*numPlatforms);
   errNum = clGetPlatformIDs(numPlatforms, platformsId, NULL);
+  checkError(errNum, "Failed lGetPlatformIDs.");
 
 ////  Получение характеристики платформы (версия платофрмы)
-//  char platformName[100];
-//  errNum = clGetPlatformInfo(platformsId[platform], CL_PLATFORM_VENDOR, sizeof(platformName),platformName, NULL);
-//  checkError(errNum, "Info?");
-//  fprintf(stderr, "Platform: %s\n", platformName);
+  char platformName[100];
+  for (int i = 0; i < numPlatforms; i++) {
+    errNum = clGetPlatformInfo(platformsId[i], CL_PLATFORM_VENDOR, sizeof(platformName), platformName, NULL);
+    checkError(errNum, "Info?");
+    fprintf(stderr, "Platform id = %d: %s\n", i, platformName);
+  }
 
 
 //  Создание контекста для управления объектами OpenCL
@@ -37,13 +40,13 @@ cl_context createContext(void) {
       0
   };
 
-  context = clCreateContextFromType(contextProperties, CL_DEVICE_TYPE_ACCELERATOR, NULL, NULL, &errNum);
+#if FPGA_RUN
+  cl_device_type device_type = CL_DEVICE_TYPE_ACCELERATOR;
+#else
+  cl_device_type device_type = CL_DEVICE_TYPE_CPU;
+#endif
+  context = clCreateContextFromType(contextProperties, device_type, NULL, NULL, &errNum);
   checkError(errNum, "Could not create GPU context, trying CPU..");
-
-  if (errNum != CL_SUCCESS) {
-    context = clCreateContextFromType(contextProperties, CL_DEVICE_TYPE_CPU, NULL, NULL, &errNum);
-    checkError(errNum, "Could not create CPU context");
-  }
 
   return context;
 }
@@ -74,40 +77,17 @@ cl_command_queue createCommandQueue(cl_context context, cl_device_id *device) {
   return commandQueue;
 }
 
-cl_program createProgram(cl_context context, cl_device_id device, const char *fileName) {
-//  cl_int errNum;
-//  cl_program program;
-//  size_t kernelLength;
-//  char* kernelSource;
-//  FILE* kernel_fp;
-//  size_t items_read;
-//  const char* kernel_file_mode;
-//
-//
-//  /* Create Kernel Program from the binary */
-//  std::string binary_file = aocl_utils::getBoardBinaryFile(fileName, device);
-//  printf("Using AOCX: %s\n", binary_file.c_str());
-//  program = aocl_utils::createProgramFromBinary(context, binary_file.c_str(), &device, 1);
-//
-////  cl_int err = 0;
-////  program = clCreateProgramWithSource(context, 1, slist, NULL, &err);
-////  if (program == NULL) {
-////    cerr << "Failed to create CL program from source." << endl;
-////    return NULL;
-////  }
-////  printf("Using AOCX:");
-//
-//  /* Build Kernel Program */
-//  errNum = clBuildProgram(program, 1, &device, NULL, NULL, NULL);
-//  checkError(errNum, "Faild, no build.");
+cl_program createProgram(cl_context context, cl_device_id device) {
   cl_int errNum;
   const char* kernel_file_mode;
 
+  #ifdef FPGA_RUN
+    kernel_file_mode = "rb";
+  #else  // CPU or GPU or MIC
+    kernel_file_mode = "r";
+  #endif
 
-  kernel_file_mode = "rb";
-
-
-  FILE* kernel_fp = fopen(fileName, kernel_file_mode);
+  FILE* kernel_fp = fopen(KERNEL_CL_PATH, kernel_file_mode);
   if(kernel_fp == NULL){
     fprintf(stderr,"common_ocl.ocdBuildProgramFromFile() - Cannot open kernel file!");
     exit(-1);
@@ -128,13 +108,32 @@ cl_program createProgram(cl_context context, cl_device_id device, const char *fi
   fclose(kernel_fp);
 
   /* Create the compute program from the source buffer */
+  cl_program program;
   //use Altera FPGA
-  cl_program program = clCreateProgramWithBinary(context,1,&device,&kernelLength,(const unsigned char**)&kernelSource,NULL,&errNum);
+  #if FPGA_RUN
+    program = clCreateProgramWithBinary(context,
+                                       1,
+                                       &device,
+                                       &kernelLength,
+                                       (const unsigned char **) &kernelSource,
+                                       NULL,
+                                       &errNum);
+  #else
+    program = clCreateProgramWithSource(context,
+                                       1,
+                                       (const char **) &kernelSource,
+                                       &kernelLength,
+                                       &errNum);
+  #endif
   checkError(errNum, "common_ocl.ocdBuildProgramFromFile() - Failed to create a compute program!");
 
   /* Build the program executable */
   //use Altera FPGA
-  errNum = clBuildProgram(program,1,&device,"-DOPENCL -I.",NULL,NULL);
+  #if FPGA_RUN
+    errNum = clBuildProgram(program, 1, &device, "-DOPENCL -I.", NULL, NULL);
+  #else
+    errNum = clBuildProgram(program, 1, &device, "-DOPENCL -I.", NULL, NULL);
+  #endif
 
   if (errNum == CL_BUILD_PROGRAM_FAILURE)
   {
@@ -156,19 +155,6 @@ cl_program createProgram(cl_context context, cl_device_id device, const char *fi
   free(kernelSource);
   return program;
 }
-
-//int CreateMemObjects(cl_context context, cl_mem memObjects[3], float *a, float *b) {
-//  memObjects[0] = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(float) * ARRAY_SIZE, a, NULL);
-//  memObjects[1] = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(float) * ARRAY_SIZE, b, NULL);
-//  memObjects[2] = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(float) * ARRAY_SIZE, NULL, NULL);
-//
-//  if (memObjects[0] == NULL || memObjects[1] == NULL || memObjects[2] == NULL) {
-//    cerr << "Error creating memory objects." << endl;
-//    return 1;
-//  }
-//
-//  return 0;
-//}
 
 size_t* default_wg_sizes(size_t* num_wg_sizes,const size_t max_wg_size, size_t *global_size)
 {

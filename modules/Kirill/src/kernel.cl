@@ -6,9 +6,8 @@ void __kernel csr_mult(const int        num_rows,
                       __global double * un,
                         const int       size_time)
 {
-    __global double* tmp;
     int row = get_global_id(0);
-    for (int i = 0; i < size_time; i++) {
+    // for (int i = 0; i < size_time; i++) {
         if(row < num_rows) {
             double sum = 0.;
 
@@ -21,10 +20,11 @@ void __kernel csr_mult(const int        num_rows,
 
             un[row] = sum;
 
+            // printf("da\n");
             // barrier(CLK_GLOBAL_MEM_FENCE);
-            tmp = u;
-            u = un;
-            un = tmp;
+            // tmp[row] = u[row];
+            // u[row] = un[row];
+            // un[row] = tmp[row];
         }
-    }
+    // }
 }
