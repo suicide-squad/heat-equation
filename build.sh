@@ -2,8 +2,14 @@
 
 COMPILER=$1
 BUILD=$2
+FPGA=$3
 
 Build() {
+    if [ "$FPGA" = "fpga" ]; then
+        echo "run with fpga"
+        source env_altera.sh
+    fi
+
     C_COMPILER="gcc"
     CXX_COMPILER="g++"
     TYPE_BUILD=Release
@@ -37,10 +43,19 @@ Clear() {
   fi
 }
 
-if [ "$3" = "clear" ]; then
+if [ "$4" = "clear" ]; then
     echo "run clear directory"
     Clear
 #    echo "finish clear directory"
 fi
 
+BuildAltera() {
+    cd _build/modules/Kirill/src
+    aoc -march=emulator kernel.cl -o ./kernel.aocx --board a10soc --profile
+#    CL_CONTEXT_EMULATOR_DEVICE_ALTERA=1 ./Hello
+}
+
 Build
+if [ "$FPGA" = "fpga" ]; then
+    BuildAltera
+fi

@@ -5,7 +5,7 @@
 #ifndef HEAT_EQUATION_PARSER_H
 #define HEAT_EQUATION_PARSER_H
 
-#include "ts.h"
+#include "utils/ts.h"
 
 #define OK            0
 #define NO_FILE       100

@@ -12,9 +12,10 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#include "kernel.h"
+#include "multMV.h"
+#include "createSpMat.h"
 #include "parser.h"
-#include "ts.h"
+#include "utils/ts.h"
 
 const char pathSetting[] = "../../../../initial/setting3.ini";
 const char pathFunction[] = "../../../../initial/function3.txt";

@@ -6,7 +6,8 @@
 #include <stdlib.h>
 #include <mpi.h>
 
-#include "kernel.h"
+#include "multMV.h"
+#include "createSpMat.h"
 #include "parser.h"
 #include "sgpu.h"
 
@@ -31,9 +32,8 @@ int main(int argc, char **argv) {
   MPI_Comm_size(MPI_COMM_WORLD, &sizeP);
   MPI_Comm_rank(MPI_COMM_WORLD, &rankP);
 
-  const int len=80;
-  char nameHost[len];
-  gethostname(nameHost, len);
+  char nameHost[40];
+  gethostname(nameHost, 40);
   printf("rank - %d name host - %s\n",rankP, nameHost);
 
   SpMatrix mat;
@@ -152,6 +152,13 @@ int main(int argc, char **argv) {
     printf("START!\n");
     t0 = MPI_Wtime();
   }
+#if FPGA_RUN || CPUGPU_RUN
+  multMV_altera(un_chunk, mat, u_chunk, sizeTime);
+  tmp = u_chunk;
+  u_chunk = un_chunk;
+  un_chunk = tmp;
+#else
+
   // ОСНОВНЫЕ ВЫЧИСЛЕНИЯ
   for (int t = 1; t <= sizeTime; t++) {
     //  ОБМЕН ГРАНИЦ ПО Y И Z
@@ -172,14 +179,15 @@ int main(int argc, char **argv) {
     MPI_Sendrecv(&u_chunk[IND(0, 0, NZr)], 1, planeXZ, rank_top, 3,
                  &u_chunk[IND(0, 0, 0)], 1, planeXZ, rank_down, 3, gridComm, &status[3]);
 
-    multMV(un_chunk, mat, u_chunk, NX, (NYr+RESERVE), (NZr+RESERVE));
 
+    multMV(un_chunk, mat, u_chunk, NX, (NYr+RESERVE), (NZr+RESERVE), coeffs);
     tmp = u_chunk;
     u_chunk = un_chunk;
     un_chunk = tmp;
 
   }
   //  *******************
+#endif
 
   if (rankP == ROOT) {
     printf("FINISH!\n\n");
