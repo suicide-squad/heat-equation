@@ -1,30 +1,28 @@
-void __kernel csr_mult(const int        num_rows,
+//#pragma OPENCL EXTENSION cl_khr_fp64 : enable
+
+
+
+void __kernel csr_mult_f(const int        num_rows,
                       __global int *    Ap,
                       __global int *    Aj,
-                      __global double * Au,
-                      __global double * u,
-                      __global double * un,
-                        const int       size_time)
+                      __global float *  Au,
+                      __global float *  u,
+                      __global float *  un,
+                      const int         size_time)
 {
     int row = get_global_id(0);
-    // for (int i = 0; i < size_time; i++) {
-        if(row < num_rows) {
-            double sum = 0.;
+   // printf("%d\n", row);
 
-            const int row_start = Ap[row];
-            const int row_end = Ap[row+1];
+    if(row < num_rows) {
+        float sum = 0.f;
 
-            int jj = 0;
-            for (jj = row_start; jj < row_end; jj++)
-                sum += Au[jj] * u[Aj[jj]];
+        const int row_start = Ap[row];
+        const int row_end = Ap[row+1];
 
-            un[row] = sum;
+        int jj = 0;
+        for (jj = row_start; jj < row_end; jj++)
+            sum += Au[jj] * u[Aj[jj]];
 
-            // printf("da\n");
-            // barrier(CLK_GLOBAL_MEM_FENCE);
-            // tmp[row] = u[row];
-            // u[row] = un[row];
-            // un[row] = tmp[row];
-        }
-    // }
+        un[row] = sum;
+    }
 }
