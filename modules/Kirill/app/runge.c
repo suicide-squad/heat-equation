@@ -37,7 +37,7 @@ int main(int argc, char **argv) {
   SpMatrix A, B, C;
   Setting setting;
   TYPE coeffs[4];
-  double dt;
+  TYPE dt;
   MPI_Status status[4];
   int blockYP = 0, blockZP = 0;
 

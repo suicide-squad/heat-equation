@@ -174,7 +174,7 @@ void multMV_altera(TYPE* result, SpMatrix mat, TYPE* vec, int sizeTime ) {
   context = createContext();
   commandQueue = createCommandQueue(context, &device);
   program = createProgram(context, device);
-  kernel = clCreateKernel(program, "csr_mult", NULL);
+  kernel = clCreateKernel(program, "csr_mult_f", NULL);
 
   cl_int err;
   cl_mem memResult = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(TYPE)*mat.nRows, NULL, &err);
@@ -202,13 +202,13 @@ void multMV_altera(TYPE* result, SpMatrix mat, TYPE* vec, int sizeTime ) {
   err = clGetKernelWorkGroupInfo(kernel, device, CL_KERNEL_WORK_GROUP_SIZE, sizeof(size_t), (void *) &max_wg_size, NULL);
   checkError(err, "ERROR: clGetKernelWorkGroupInfo failed");
 
-  size_t *wg_size = default_wg_sizes(&num_wg_sizes,max_wg_size, globalWorkSize);
-  fprintf(stdout, "wrk sizez: %lu %lu %lu\n", max_wg_size, wg_size[0], globalWorkSize[0]);
+  size_t *localWorkSize = default_wg_sizes(&num_wg_sizes,max_wg_size, globalWorkSize);
+//  size_t localWorkSize[] = {1};
+  fprintf(stdout, "local size = %lu global size = %lu\n", localWorkSize[0], globalWorkSize[0]);
 
   cl_mem tmp;
   for (int i = 0; i < sizeTime; i++) {
-    err = clEnqueueNDRangeKernel(commandQueue, kernel, 1, NULL, globalWorkSize, wg_size, 0, NULL, NULL);
-
+    err = clEnqueueNDRangeKernel(commandQueue, kernel, 1, NULL, globalWorkSize, localWorkSize, 0, NULL, NULL);
     tmp = memVec;
     memVec = memResult;
     memResult = tmp;
