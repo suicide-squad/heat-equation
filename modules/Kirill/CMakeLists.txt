@@ -8,7 +8,7 @@ set(APP         "app_${MODULE}")
 set(LIBRARY     "lib_${MODULE}")
 
 set(TYPE        DOUBLE)
-set(THREAD_RUN  0)
+set(THREAD_RUN  1)
 set(MKL_RUN     0)
 set(AVX2_RUN    0)
 set(FPGA_RUN 	0)

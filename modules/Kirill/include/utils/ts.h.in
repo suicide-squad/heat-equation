@@ -10,6 +10,7 @@
 
 #define ROOT 0
 #define NR 7
+#define ALIGNMENT 32
 
 //  Load settings
 #define ENABLE_PARALLEL ${THREAD_RUN}
@@ -92,5 +93,12 @@ typedef float TYPE;
 typedef double TYPE;
 
 #endif
+
+typedef struct {
+  double start;
+  double finish;
+} t_timer;
+
+static t_timer timer;
 
 #endif //HEAT_EQUATION_TS_H_H

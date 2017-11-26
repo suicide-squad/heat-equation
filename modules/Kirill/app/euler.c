@@ -101,7 +101,6 @@ int main(int argc, char **argv) {
 
   MPI_Comm gridComm;
 
-
   //  размер каждой размерности
   int dims[DIM_CART];   int periods[DIM_CART];
   int gridCoords[DIM_CART];
@@ -117,8 +116,8 @@ int main(int argc, char **argv) {
   MPI_Cart_coords(gridComm, rankP, DIM_CART, gridCoords);
 
   int dimChunk = NX*(NYr+RESERVE)*(NZr+RESERVE);
-  u_chunk = (TYPE *)aligned_alloc(32, sizeof(TYPE)*dimChunk);
-  un_chunk = (TYPE *)aligned_alloc(32, sizeof(TYPE)*dimChunk);
+  u_chunk = (TYPE *)aligned_alloc(ALIGNMENT, sizeof(TYPE)*dimChunk);
+  un_chunk = (TYPE *)aligned_alloc(ALIGNMENT, sizeof(TYPE)*dimChunk);
 
   TYPE *tmp;
 
@@ -153,7 +152,7 @@ int main(int argc, char **argv) {
     t0 = MPI_Wtime();
   }
 #if FPGA_RUN || CPUGPU_RUN
-  multMV_altera(un_chunk, mat, u_chunk, sizeTime);
+  multMV_altera(un_chunk, mat, u_chunk,sizeTime);
   tmp = u_chunk;
   u_chunk = un_chunk;
   un_chunk = tmp;

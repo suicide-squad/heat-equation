@@ -27,7 +27,7 @@ cl_context createContext(void) {
 ////  Получение характеристики платформы (версия платофрмы)
   char platformName[100];
   for (int i = 0; i < numPlatforms; i++) {
-    errNum = clGetPlatformInfo(platformsId[i], CL_PLATFORM_VENDOR, sizeof(platformName), platformName, NULL);
+    errNum = clGetPlatformInfo(platformsId[i], CL_PLATFORM_NAME, sizeof(platformName), platformName, NULL);
     checkError(errNum, "Info?");
     fprintf(stderr, "Platform id = %d: %s\n", i, platformName);
   }
@@ -43,7 +43,7 @@ cl_context createContext(void) {
 #if FPGA_RUN
   cl_device_type device_type = CL_DEVICE_TYPE_ACCELERATOR;
 #else
-  cl_device_type device_type = CL_DEVICE_TYPE_CPU;
+  cl_device_type device_type = CL_DEVICE_TYPE_GPU;
 #endif
   context = clCreateContextFromType(contextProperties, device_type, NULL, NULL, &errNum);
   checkError(errNum, "Could not create GPU context, trying CPU..");
