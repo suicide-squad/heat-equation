@@ -174,7 +174,7 @@ void multMV_altera(TYPE* result, SpMatrix mat, TYPE* vec, int sizeTime ) {
   context = createContext();
   commandQueue = createCommandQueue(context, &device);
   program = createProgram(context, device);
-  kernel = clCreateKernel(program, "csr_mult_f", NULL);
+  kernel = clCreateKernel(program, "csr_mult_d", NULL);
 
   cl_int err;
   cl_mem memResult = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(TYPE)*mat.nRows, NULL, &err);
@@ -194,7 +194,6 @@ void multMV_altera(TYPE* result, SpMatrix mat, TYPE* vec, int sizeTime ) {
   err |= clSetKernelArg(kernel, 3, sizeof(cl_mem), &memValue);
   err |= clSetKernelArg(kernel, 4, sizeof(cl_mem), &memVec);
   err |= clSetKernelArg(kernel, 5, sizeof(cl_mem), &memResult);
-  err |= clSetKernelArg(kernel, 6, sizeof(int), &sizeTime);
   checkError(err,"clSetKernelArg");
 
   size_t globalWorkSize[1] = {mat.nRows};
