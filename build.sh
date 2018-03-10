@@ -1,18 +1,94 @@
 #!/bin/bash
 
-COMPILER=$1
-BUILD=$2
-FPGA=$3
+Clear() {
+  if [ -d _build ]; then
+    rm -rf _build
+  fi
+}
+
+while [[ $# -ge 1 ]]
+do
+    key=$1
+    case $key in
+        -c|--compiler)
+            COMPILER=$2
+            shift
+            ;;
+        -a|--arc)
+            ARCH=$2
+            shift
+            ;;
+        -l|--lib)
+            LIB=$2
+            shift
+            ;;
+        -f|--filename)
+            OUT_FILE=$2
+            shift
+            ;;
+        -m|--mode)
+            BUILD_MODE=$2
+            shift
+            ;;
+        -r|--rm)
+            Clear
+            shift
+            ;;
+        *)
+            ;;
+    esac
+
+    shift
+done
+
+case $COMPILER in
+    intel)
+        source /opt/intel/bin/compilervars.sh intel64
+        C_COMPILER="icc"
+        CXX_COMPILER="icpc"
+        ;;
+    *)
+        C_COMPILER="gcc"
+        CXX_COMPILER="g++"
+        ;;
+esac
+
+if [ "$ARCH" == "gpu" ] || [ "$ARCH" == "fpga" ]
+then
+    LIB=opencl
+elif [ "$ARCH" == "cpu" ] && [ "$LIB" == "mkl" ] && [ "$C_COMPILER" == "icc" ]
+then
+    LIB=mkl
+elif [ "$ARCH" == "cpu" ] && [ "$LIB" == "omp" ]
+then
+    LIB=omp
+elif [ "$ARCH" == "cpu" ] && [ "$LIB" == "avx" ]
+then
+    LIB=avx
+fi
+
+if [ "$LIB" == "" ]; then
+    LIB=""
+fi
+
+if [ "$BUILD_MODE" == "debug" ]; then
+    BUILD_MODE="Debug"
+else
+    BUILD_MODE="Release"
+fi
+
+if [ "$OUT_FILE" == "" ]
+then
+    OUT_FILE=euler3D.txt
+fi
+
 
 Build() {
-    if [ "$FPGA" = "fpga" ]; then
-        echo "run with fpga"
+    if [ "$ARCH" = "fpga" ]; then
+        echo "Run with fpga"
         source env_altera.sh
     fi
 
-    C_COMPILER="gcc"
-    CXX_COMPILER="g++"
-    TYPE_BUILD=Release
     root_dir="$( pwd )"
     if [ ! -d _build ]; then
         mkdir _build
@@ -21,33 +97,13 @@ Build() {
     if [ -f "CMakeCache.txt" ]; then
         rm "CMakeCache.txt"
     fi
-    echo $root_dir
-    if [ "$COMPILER" = "intel" ]; then
-      source /opt/intel/bin/iccvars.sh intel64
-      C_COMPILER="icc"
-      CXX_COMPILER="icpc"
-    fi
-    if [ "$BUILD" = "debug" ]; then
-        TYPE_BUILD=Debug
-    fi
-    echo "COMPILER = $C_COMPILER"
-    echo "TYPE_BUILD = $TYPE_BUILD"
-    cmake -DCMAKE_BUILD_TYPE=$TYPE_BUILD -DCMAKE_C_COMPILER=$C_COMPILER -DCMAKE_CXX_COMPILER=$CXX_COMPILER $root_dir
+
+    echo "C_COMPILER = $C_COMPILER"
+    echo "CXX_COMPILER = $CXX_COMPILER"
+    cmake -DCMAKE_BUILD_TYPE=$BUILD_MODE -DCMAKE_C_COMPILER=$C_COMPILER -DCMAKE_CXX_COMPILER=$CXX_COMPILER -DARCH=$ARCH -DLIB=$LIB -DOUT_FILE=$OUT_FILE  $root_dir
     make -j2
     cd $root_dir
 }
-
-Clear() {
-  if [ -d _build ]; then
-    rm -rf _build
-  fi
-}
-
-if [ "$4" = "clear" ]; then
-    echo "run clear directory"
-    Clear
-#    echo "finish clear directory"
-fi
 
 BuildAltera() {
     cd _build/modules/Kirill/src
@@ -56,6 +112,6 @@ BuildAltera() {
 }
 
 Build
-if [ "$FPGA" = "fpga" ]; then
+if [ "$ARCH" = "fpga" ]; then
     BuildAltera
 fi
