@@ -11,8 +11,12 @@ message(STATUS ${srcs})
 
 add_library(${target} STATIC ${hrcs} ${srcs})
 
-target_link_libraries(${target} ${MPI_C_LIBRARIES})
-target_link_libraries(${target} ${M_LIB})
+if( NOT ${FPGA_RUN})
+    target_link_libraries(${target} ${MPI_C_LIBRARIES})
+endif()
+
+
+# target_link_libraries(${target} ${M_LIB})
 
 if(${MKL_RUN})
     include_directories(${MKL_INCLUDE_DIRS})
@@ -31,5 +35,3 @@ endif()
 
 file(GLOB src_cl "*.cl")
 file(COPY ${src_cl} DESTINATION ".")
-
-

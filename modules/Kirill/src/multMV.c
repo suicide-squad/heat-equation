@@ -217,7 +217,7 @@ void multMV_altera(TYPE* result, SpMatrix mat, TYPE* vec, int sizeTime ) {
 
   cl_mem tmp;
   for (int i = 0; i < sizeTime; i++) {
-    err = clEnqueueNDRangeKernel(commandQueue, kernel, 1, NULL, globalWorkSize, localWorkSize2, 0, NULL, NULL);
+    err = clEnqueueNDRangeKernel(commandQueue, kernel, 1, NULL, globalWorkSize, NULL, 0, NULL, NULL);
     checkError(err,  "clEnqueueNDRangeKernel");
 
     tmp = memVec;
@@ -358,4 +358,3 @@ void denseMult(TYPE **result, TYPE **mat, TYPE *vec, int dim) {
       (*result)[x]+=mat[x][i]*vec[i];
   }
 }
-

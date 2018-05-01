@@ -10,6 +10,15 @@ while [[ $# -ge 1 ]]
 do
     key=$1
     case $key in
+        -h|--help)
+            echo "Flags"
+            echo "-a|--arc"
+            echo "-c|--compiler"
+            echo "-l|--lib"
+            echo "-f|--filename"
+            echo "FPGA compile $./build.sh -a fpga -l opencl -f result.txt"
+            exit
+            ;;
         -c|--compiler)
             COMPILER=$2
             shift
@@ -34,6 +43,10 @@ do
             Clear
             shift
             ;;
+        -ca|--compile-aocx)
+            COMPILE_AOCX_FLAG=$2
+            shift
+            ;;
         *)
             ;;
     esac
@@ -48,8 +61,14 @@ case $COMPILER in
         CXX_COMPILER="icpc"
         ;;
     *)
-        C_COMPILER="gcc"
-        CXX_COMPILER="g++"
+    # TO-DO Get back a configuration for emulator. Also need revert in BuildAltera
+        if [ "$ARCH" = "fpga" ]; then
+            C_COMPILER="arm-linux-gnueabihf-gcc"
+            CXX_COMPILER="arm-linux-gnueabihf-g++"
+        else
+            C_COMPILER="gcc"
+            CXX_COMPILER="g++"
+        fi
         ;;
 esac
 
@@ -107,11 +126,11 @@ Build() {
 
 BuildAltera() {
     cd _build/modules/Kirill/src
-    aoc -march=emulator kernel.cl -o ./kernel.aocx --board a10soc --profile
+    aoc kernel.cl -o ./kernel.aocx -board=de10_nano_sharedonly --profile
 #    CL_CONTEXT_EMULATOR_DEVICE_ALTERA=1 ./Hello
 }
 
 Build
-if [ "$ARCH" = "fpga" ]; then
+if [ "$ARCH" = "fpga" ] && [ "$COMPILE_AOCX_FLAG" = 1 ]; then
     BuildAltera
 fi
