@@ -33,6 +33,7 @@ void copyingBorders(TYPE* vec, int nx, int ny, int nz);
 void multMV(TYPE* result, SpMatrix mat, TYPE* vec, int nx, int ny, int nz, TYPE* coeff);
 
 void multMV_altera(TYPE* result, SpMatrix mat, TYPE* vec, int sizeTime);
+void naive_formula(TYPE* result, TYPE* vec, const TYPE* const coeff, const int nx, const int ny, const int nz, const int sizeTime);
 
 // Суммирование векторов для рунге-кутты
 void sumV(TYPE **result, TYPE *U, TYPE *k1, TYPE *k2, TYPE *k3, TYPE *k4, int N, TYPE h);

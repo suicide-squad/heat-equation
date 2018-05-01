@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <mpi.h>
+#include <sys/unistd.h>
 
 #include "multMV.h"
 #include "createSpMat.h"
@@ -41,7 +42,7 @@ int main(int argc, char **argv) {
   TYPE coeffs[4];
   TYPE* u = NULL, *u_chunk = NULL, *un_chunk;
 
-  int NX, NY, NZ, NYr, NZr;
+  int NX, NY, NZ;
 
   if (rankP == ROOT) {
     int error;
@@ -96,18 +97,18 @@ int main(int argc, char **argv) {
 
 //  if (rankP == ROOT) printf("blockY %d blockZ %d\n", blockYP, blockZP);
 
-  NYr = (NY - RESERVE)/blockYP;
-  NZr = (NZ - RESERVE)/blockZP;
+  const int NYr = (NY - RESERVE)/blockYP;
+  const int NZr = (NZ - RESERVE)/blockZP;
 
   MPI_Comm gridComm;
 
   //  размер каждой размерности
-  int dims[DIM_CART];   int periods[DIM_CART];
+  const int dims[] = { blockZP, blockYP };
+  //  наличие циклов в каждой размерности
+  const int periods[] = {0, 0};
+
   int gridCoords[DIM_CART];
 
-  dims[0] = blockZP; dims[1] = blockYP;
-  //  наличие циклов в каждой размерности
-  periods[0] = 0; periods[1] = 0;
   //  разрешение системе менять номера процессов
   int reorder = 0;
   MPI_Cart_create(MPI_COMM_WORLD, DIM_CART, dims, periods, reorder, &gridComm);
@@ -151,13 +152,13 @@ int main(int argc, char **argv) {
     printf("START!\n");
     t0 = MPI_Wtime();
   }
-#if FPGA_RUN || CPUGPU_RUN
+#if FPGA_RUN || CPU_CL_RUN || GPU_CL_RUN
   multMV_altera(un_chunk, mat, u_chunk,sizeTime);
+  // naive_formula(un_chunk, u_chunk, coeffs, NX, NYr + RESERVE, NZr + RESERVE, sizeTime);
   tmp = u_chunk;
   u_chunk = un_chunk;
   un_chunk = tmp;
 #else
-
   // ОСНОВНЫЕ ВЫЧИСЛЕНИЯ
   for (int t = 1; t <= sizeTime; t++) {
     //  ОБМЕН ГРАНИЦ ПО Y И Z
@@ -183,7 +184,6 @@ int main(int argc, char **argv) {
     tmp = u_chunk;
     u_chunk = un_chunk;
     un_chunk = tmp;
-
   }
   //  *******************
 #endif

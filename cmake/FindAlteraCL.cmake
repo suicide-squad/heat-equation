@@ -10,14 +10,14 @@ FIND_LIBRARY(OpenCL_LIBRARIES
         NAMES
         OpenCL
         PATHS
-        $ENV{ALTERAOCLSDKROOT}/linux64/lib
-        ${ALTERAOCLSDKROOT}/linux64/lib
-        $ENV{${ALTERAOCLSDKROOT}}/linux64/lib)
+        $ENV{ALTERAOCLSDKROOT}/host/arm32/lib
+        ${ALTERAOCLSDKROOT}/host/arm32/lib
+        $ENV{${ALTERAOCLSDKROOT}}/host/arm32/lib)
 
 FIND_LIBRARY(AlteraCL_LIBRARY
         NAMES
         libalteracl.so
         PATHS
-        $ENV{ALTERAOCLSDKROOT}/linux64/lib
-        ${ALTERAOCLSDKROOT}/linux64/lib
-        $ENV{${ALTERAOCLSDKROOT}}/linux64/lib)
+        $ENV{ALTERAOCLSDKROOT}/board/de10_nano/arm32/lib
+        ${ALTERAOCLSDKROOT}/board/de10_nano/arm32/lib
+        $ENV{${ALTERAOCLSDKROOT}}/board/de10_nano/arm32/lib)
