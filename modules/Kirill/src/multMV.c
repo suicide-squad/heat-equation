@@ -49,6 +49,42 @@ void multMV_default(TYPE* result, SpMatrix mat, TYPE* vec) {
 }
 
 #if AVX2_RUN
+
+// Известна структура - версия 2 (по столбцам)
+inline void multMV_AVX_v2(TYPE* result, SpMatrix mat, TYPE* vec, int nx, int ny, int nz) {
+ __m256d mask = _mm256_setr_pd(-1,-1,-1, 0);
+ __m256d zero =_mm256_setzero_pd();
+//  #pragma omp parallel for if (ENABLE_PARALLEL)
+  copyingBorders(vec, nx, ny, nz);
+
+  for (int z = 1; z < nz - 1; z++) {
+    for (int y = 1; y < ny - 1; y++) {
+      for (int x = 1; x < nx - 1; x++) {
+
+        int *col = &mat.col[IND_mult(x,y,z)*NR];
+        TYPE * val = &mat.value[IND_mult(x,y,z)*NR];
+
+        m_ind v_col = mm_load_si(col);
+        m_real v_val = mm_load(val);
+        m_real v_vec = mm_i32gather(vec, v_col);
+
+        m_real rowsum = mm_mul(v_vec, v_val);
+
+        v_col = mm_load_si(col + LENVEC);
+        v_val = mm_load(val + LENVEC);
+        // m_real v_vec2 = mm_i32gather(vec, v_col2);
+        v_vec = _mm256_mask_i32gather_pd(zero, vec, v_col, mask, 8);
+        rowsum = mm_fmadd(v_vec, v_val, rowsum);
+        rowsum = mm_hadd(rowsum, rowsum);
+
+        result[IND_mult(x,y,z)] = ((TYPE*)&rowsum)[0] + ((TYPE*)&rowsum)[2];
+      } // x
+    } // y
+  } // z
+
+}
+
+// Известна структура - версия 1 (по столбцам)
 inline void multMV_AVX_1(TYPE* result, SpMatrix mat, TYPE* vec, int nx, int ny, int nz) {
   TYPE * val = mat.value;
   TYPE *vec2 = vec;
@@ -259,7 +295,7 @@ void naive_formula(TYPE* result, TYPE* vec, const TYPE* const coeff, const int n
   cl_mem memResult = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(TYPE)*dims, NULL, &err);
   checkError(err,"memResult");
   cl_mem memVec = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(TYPE)*dims, vec, &err);
-  checkError(err,"memVec");
+  checkError(err,"medmVec");
 
   err = clSetKernelArg(kernel,  0, sizeof(int), &nx);
   err |= clSetKernelArg(kernel, 1, sizeof(int), &ny);
@@ -316,8 +352,9 @@ void multMV(TYPE* result, SpMatrix mat, TYPE* vec, int nx, int ny, int nz, TYPE*
     multMV_mklf(result, mat, vec);
   #endif
 #elif AVX2_RUN
-//  multMV_AVX_1(result,mat, vec, nx, ny, nz);
-    multMV_AVX_optimize(result,mat, vec, nx, ny, nz, coeff);
+ // multMV_AVX_1(result,mat, vec, nx, ny, nz);
+ multMV_AVX_v2(result,mat, vec, nx, ny, nz);
+    // multMV_AVX_optimize(result,mat, vec, nx, ny, nz, coeff);
 #else
     multMV_default(result, mat, vec);
 #endif

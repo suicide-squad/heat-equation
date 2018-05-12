@@ -37,7 +37,7 @@ def main():
     U = np.array([function(x, y, z) for z in Z for y in Y for x in X])
     expect = np.array([expected(x, y, z, t) for z in Z for y in Y for x in X])
 
-    pathOutputU = os.path.join(os.pardir, "initial", 'function3_8.txt')
+    pathOutputU = os.path.join(os.pardir, "initial", 'function3.txt')
     #pathOutputExp = os.path.join(os.pardir, "initial", 'expected3.txt')
 
     np.savetxt(pathOutputU, U, fmt='%.15e',delimiter='\n')
