@@ -15,7 +15,8 @@ extern "C" {
 // Создание матрицы для явных схем
 void createExplicitSpMat(SpMatrix *mat, TYPE coeffs[4], int dim, int NX, int NXY);
 
-void createExplicitSpMatV2R(SpMatrix* mat, TYPE* coeffs, int nx, int ny, int nz, MPI_Comm comm);
+void createExplicitSpMatV2R(SpMatrix* mat, const TYPE* const coeffs, const int nx, const int ny, const int nz,
+                            const int rank_left, const int rank_right, const int rank_down, const int rank_top);
 void createExplicitSpMatV2(SpMatrix *mat, TYPE coeffs[4], int nx, int ny, int nz);
 
 // Создание матрицы для неявных схем

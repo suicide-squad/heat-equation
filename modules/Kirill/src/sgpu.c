@@ -7,6 +7,7 @@
 
 #include "sgpu.h"
 
+#if MPI_RUN
 void scatter_by_block(TYPE *u, TYPE *u_chunk, int nx, int ny, int nyr, int nzr, MPI_Comm gridComm, int reserve) {
     int ndim = 0;
     MPI_Cartdim_get(gridComm, &ndim);
@@ -83,6 +84,9 @@ void gather_by_block(TYPE *u, TYPE *u_chunk, int nx, int ny, int nyr, int nzr, i
         free(u_z);
     }
 }
+#else
+//TODO
+#endif
 
 void get_blocks(int *blockY, int *blockZ, int sizeProc) {
     int sqrtNum = (int) sqrt(sizeProc);

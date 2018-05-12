@@ -61,11 +61,11 @@ endif()
 
 if (NOT ${LIB} MATCHES "opencl")
 	message(STATUS "MPI LIB")
-	set(MPI_RUN 0)
-else()
 	find_package(MPI REQUIRED)
 	include_directories( ${MPI_INCLUDE_PATH} )
 	set(MPI_RUN 1)
+else()
+	set(MPI_RUN 0)
 endif()
 
 

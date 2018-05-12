@@ -4,7 +4,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/unistd.h>
+#define _BSD_SOURCE
+#include <unistd.h>
 #include <string.h>
 
 #include "multMV.h"
@@ -59,7 +60,7 @@ int main(int argc, char **argv) {
         if (error != OK) return error;
         
         dim = (setting.NX + RESERVE) * (setting.NY + RESERVE) * (setting.NZ + RESERVE);
-        u = (TYPE *) calloc(dim, sizeof(TYPE));
+        u = (TYPE *) calloc((size_t )dim, sizeof(TYPE));
         
         error = readFunction(INPUT_EULER_FUNCTION_PATH, u, setting.NX + RESERVE,
                              setting.NY + RESERVE, setting.NZ + RESERVE, SHIFT);
@@ -110,6 +111,7 @@ int main(int argc, char **argv) {
     u_chunk = (TYPE *) aligned_alloc(ALIGNMENT, sizeof(TYPE) * dimChunk);
     un_chunk = (TYPE *) aligned_alloc(ALIGNMENT, sizeof(TYPE) * dimChunk);
     
+    int rank_left, rank_right, rank_down, rank_top;
     // SCATTER
 #if MPI_RUN
     //  размер каждой размерности
@@ -128,7 +130,6 @@ int main(int argc, char **argv) {
     
     scatter_by_block(u, u_chunk, NX, NY, NYr, NZr, gridComm, RESERVE);
     
-    int rank_left, rank_right, rank_down, rank_top;
     MPI_Cart_shift(gridComm, 1, -1, &rank_left, &rank_right);
     MPI_Cart_shift(gridComm, 0, 1, &rank_down, &rank_top);
 #else
@@ -161,11 +162,10 @@ int main(int argc, char **argv) {
         printf("START!\n");
         t0 = WTIME();
     }
-    printf("%d %d %d\n",nonZero, dimChunk, dim);
 #if FPGA_RUN || CPU_CL_RUN || GPU_CL_RUN
-    multMV_altera(un_chunk, mat, u_chunk,sizeTime);
-    // naive_formula(un_chunk, u_chunk, coeffs, NX, NYr + RESERVE, NZr + RESERVE, sizeTime);
-    tmp = u_chunk;
+//    multMV_altera(un_chunk, mat, u_chunk, sizeTime);
+    naive_formula(un_chunk, u_chunk, coeffs, NX, NYr + RESERVE, NZr + RESERVE, sizeTime);
+    TYPE *tmp = u_chunk;
     u_chunk = un_chunk;
     un_chunk = tmp;
 #elif MPI_RUN

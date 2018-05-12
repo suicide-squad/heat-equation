@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <mpi.h>
 #include <multMV.h>
 
 #define IND_mult(x, y, z) ((x) + (y)*nx + (z)*ny*nx)
