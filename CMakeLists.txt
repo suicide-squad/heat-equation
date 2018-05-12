@@ -14,9 +14,6 @@ if(OPENMP_FOUND)
     set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}    ${OpenMP_C_FLAGS}")
 endif()
 
-find_package( MPI REQUIRED )
-include_directories( ${MPI_INCLUDE_PATH} )
-
 find_library(M_LIB m)
 
 add_subdirectory(modules)

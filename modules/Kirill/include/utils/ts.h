@@ -5,8 +5,8 @@
 #ifndef HEAT_EQUATION_TS_H_H
 #define HEAT_EQUATION_TS_H_H
 
-#include <mpi.h>
 #include <math.h>
+#include <omp.h>
 
 #define ROOT 0
 #define NR 7
@@ -14,11 +14,12 @@
 
 //  Load settings
 #define ENABLE_PARALLEL 0
-#define AVX2_RUN        1
+#define AVX2_RUN        0
 #define MKL_RUN         0
 #define CPU_CL_RUN      0
 #define GPU_CL_RUN      0
 #define FPGA_RUN        0
+#define MPI_RUN         1
 
 #define DOUBLE_TYPE
 
@@ -28,6 +29,13 @@
 #define RESULT_EULER_PATH           "/home/kirill/projects/heat-equation/result/Kirill/euler3D.txt"
 #define KERNEL_CL_PATH              ""
 
+#if MPI_RUN
+#include <mpi.h>
+  #define WTIME() MPI_Wtime()
+#else
+  #define WTIME() omp_get_wtime()
+
+#endif
 
 #if AVX2_RUN
 #include <immintrin.h>

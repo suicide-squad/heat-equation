@@ -5,8 +5,8 @@
 #ifndef HEAT_EQUATION_TS_H_H
 #define HEAT_EQUATION_TS_H_H
 
-#include <mpi.h>
 #include <math.h>
+#include <omp.h>
 
 #define ROOT 0
 #define NR 7
@@ -19,6 +19,7 @@
 #define CPU_CL_RUN      ${CPU_CL_RUN}
 #define GPU_CL_RUN      ${GPU_CL_RUN}
 #define FPGA_RUN        ${FPGA_RUN}
+#define MPI_RUN         ${MPI_RUN}
 
 #define ${TYPE}_TYPE
 
@@ -28,6 +29,13 @@
 #define RESULT_EULER_PATH           "${RESULT_EULER_PATH}"
 #define KERNEL_CL_PATH              "${KERNEL_CL_PATH}"
 
+#if MPI_RUN
+#include <mpi.h>
+  #define WTIME() MPI_Wtime()
+#else
+  #define WTIME() omp_get_wtime()
+
+#endif
 
 #if AVX2_RUN
 #include <immintrin.h>

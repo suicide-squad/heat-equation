@@ -59,6 +59,16 @@ elseif(${FPGA_RUN})
 	find_package(AlteraCL)
 endif()
 
+if (NOT ${LIB} MATCHES "opencl")
+	message(STATUS "MPI LIB")
+	set(MPI_RUN 0)
+else()
+	find_package(MPI REQUIRED)
+	include_directories( ${MPI_INCLUDE_PATH} )
+	set(MPI_RUN 1)
+endif()
+
+
 if(${AVX2_RUN} AND AVX_FOUND)
     set(AVX2_RUN, 1)
     message(STATUS "AVX2 RUN")
