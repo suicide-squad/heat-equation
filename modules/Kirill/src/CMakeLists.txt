@@ -11,8 +11,14 @@ message(STATUS ${srcs})
 
 add_library(${target} STATIC ${hrcs} ${srcs})
 
-target_link_libraries(${target} ${MPI_C_LIBRARIES})
 target_link_libraries(${target} ${M_LIB})
+
+# Added MPI Libraries
+if (NOT ${LIB} MATCHES "opencl")
+    message(STATUS "MPI LIB")
+else()
+    target_link_libraries(${target} ${MPI_C_LIBRARIES})
+endif()
 
 if(${MKL_RUN})
     include_directories(${MKL_INCLUDE_DIRS})
@@ -29,7 +35,6 @@ elseif(${FPGA_RUN})
    	target_link_libraries(${target} ${AlteraCL_LIBRARY})
 endif()
 
+# Copy file kernel
 file(GLOB src_cl "*.cl")
 file(COPY ${src_cl} DESTINATION ".")
-
-

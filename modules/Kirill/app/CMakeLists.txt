@@ -5,7 +5,6 @@ file(GLOB  src_euler euler.c)
 
 add_executable(${target} ${src_euler})
 target_link_libraries(${target} ${LIBRARY})
-target_link_libraries(${target} ${MPI_C_LIBRARIES})
 
 ## РУНГЕ-КУТТ
 #set(target "${APP}_runge")
