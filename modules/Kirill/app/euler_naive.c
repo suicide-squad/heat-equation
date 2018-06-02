@@ -29,8 +29,7 @@ int main(int argc, char **argv) {
     
     int blockYP = 0, blockZP = 0;
 
-#if MPI_RUN
-//    INIT MPI SETTING
+    // INIT MPI SETTING
     MPI_Status status[4];
     MPI_Init(&argc, &argv);
     
@@ -39,13 +38,11 @@ int main(int argc, char **argv) {
     
     if (rankP == ROOT) printf("MPI RUN. %d size processes\n", sizeP);
     MPI_Comm gridComm;
-#endif
     
     char nameHost[40];
     gethostname(nameHost, 40);
     printf("Rank - %d name host - %s\n", rankP, nameHost);
     
-    SpMatrix mat;
     int dim = 0;
     TYPE coeffs[4];
     TYPE *u = NULL, *u_chunk = NULL, *un_chunk;
@@ -90,14 +87,12 @@ int main(int argc, char **argv) {
         NY = setting.NY + RESERVE;
         NZ = setting.NZ + RESERVE;
     }
-
-#if MPI_RUN
+    
     MPI_Bcast(&sizeTime, 1, MPI_UNSIGNED_LONG, ROOT, MPI_COMM_WORLD);
     MPI_Bcast(coeffs, 4, MPI_TYPE, ROOT, MPI_COMM_WORLD);
     MPI_Bcast(&NX, 1, MPI_INT, ROOT, MPI_COMM_WORLD);
     MPI_Bcast(&NY, 1, MPI_INT, ROOT, MPI_COMM_WORLD);
     MPI_Bcast(&NZ, 1, MPI_INT, ROOT, MPI_COMM_WORLD);
-#endif
     
     //  Определения числа процессов в каждом измерении
     get_blocks(&blockYP, &blockZP, sizeP);
@@ -113,7 +108,6 @@ int main(int argc, char **argv) {
     
     int rank_left, rank_right, rank_down, rank_top;
     // SCATTER
-#if MPI_RUN
     //  размер каждой размерности
     const int dims[] = {blockZP, blockYP};
     //  наличие циклов в каждой размерности
@@ -124,24 +118,10 @@ int main(int argc, char **argv) {
     int reorder = 0;
     MPI_Cart_create(MPI_COMM_WORLD, DIM_CART, dims, periods, reorder, &gridComm);
     
-    // Определение координат процесса в решетке
-    // int gridCoords[DIM_CART];
-    // MPI_Cart_coords(gridComm, rankP, DIM_CART, gridCoords);
-    
     scatter_by_block(u, u_chunk, NX, NY, NYr, NZr, gridComm, RESERVE);
     
     MPI_Cart_shift(gridComm, 1, -1, &rank_left, &rank_right);
     MPI_Cart_shift(gridComm, 0, 1, &rank_down, &rank_top);
-#else
-    memcpy(u_chunk, u, (size_t )dim);
-#endif
-    
-    const int nonZero = dimChunk * NR;
-    
-    initSpMat(&mat, nonZero, dimChunk);
-    createExplicitSpMatV2(&mat, coeffs, NX, NYr + RESERVE, NZr + RESERVE);
-
-#if MPI_RUN
 
 //   printf("rank - %d; left %d; right %d; top %d; down %d\n", rankP, rank_left, rank_right, rank_top, rank_down);
     
@@ -154,7 +134,6 @@ int main(int argc, char **argv) {
     MPI_Type_contiguous(NX * (NYr + RESERVE), MPI_TYPE, &planeXZ);
     MPI_Type_commit(&planeXZ);
     // *****************************
-#endif
     
     copyingBorders(u_chunk, NX, NYr + RESERVE, NZr + RESERVE);
     
@@ -162,13 +141,13 @@ int main(int argc, char **argv) {
         printf("START!\n");
         t0 = WTIME();
     }
+    // ОСНОВНЫЕ ВЫЧИСЛЕНИЯ
 #if FPGA_RUN || CPU_CL_RUN || GPU_CL_RUN
-    multMV_altera(un_chunk, mat, u_chunk, sizeTime);
+    naive_formula(un_chunk, u_chunk, coeffs, NX, NYr + RESERVE, NZr + RESERVE, sizeTime);
     TYPE *tmp = u_chunk;
     u_chunk = un_chunk;
     un_chunk = tmp;
-#elif MPI_RUN
-    // ОСНОВНЫЕ ВЫЧИСЛЕНИЯ
+#else
     for (int t = 1; t <= sizeTime; t++) {
         //  ОБМЕН ГРАНИЦ ПО Y И Z
         
@@ -188,15 +167,30 @@ int main(int argc, char **argv) {
         MPI_Sendrecv(&u_chunk[IND(0, 0, NZr)], 1, planeXZ, rank_top, 3,
                      &u_chunk[IND(0, 0, 0)], 1, planeXZ, rank_down, 3, gridComm, &status[3]);
         
-        multMV(un_chunk, mat, u_chunk, NX, (NYr + RESERVE), (NZr + RESERVE), coeffs);
-        TYPE *tmp = u_chunk;
+        copyingBorders(u_chunk, NX, NYr + RESERVE, NZr + RESERVE);
+
+        #pragma omp parallel for if (ENABLE_PARALLEL)
+        for (int z = SHIFT; z < NZr + RESERVE - SHIFT; z++) {
+            for (int y = SHIFT; y < NYr + RESERVE - SHIFT; y++) {
+              for (int x = 1; x < NX - 1; x++) {
+                un_chunk[IND(x,y,z)] =
+                    coeffs[3]*u_chunk[IND(x, y, z - 1)] +
+                    coeffs[2]*u_chunk[IND(x, y - 1, z)] +
+                    coeffs[1]*u_chunk[IND(x - 1, y, z)] +
+                    coeffs[0]*u_chunk[IND(x, y, z)]     +
+                    coeffs[1]*u_chunk[IND(x + 1, y, z)] +
+                    coeffs[2]*u_chunk[IND(x, y + 1, z)] +
+                    coeffs[3]*u_chunk[IND(x, y, z + 1)];
+              } // x
+            } // y
+        } // z
+
+        TYPE * tmp = u_chunk;
         u_chunk = un_chunk;
         un_chunk = tmp;
     }
-    //  *******************
-#else
-    // TODO
 #endif
+    //  *******************
     
     if (rankP == ROOT) {
         printf("FINISH!\n\n");
@@ -204,11 +198,7 @@ int main(int argc, char **argv) {
     }
     
     // GATHER
-#if MPI_RUN
     gather_by_block(u, u_chunk, NX, NY, NYr, NZr, RESERVE, gridComm);
-#else
-    memcpy(u, u_chunk, (size_t )dim);
-#endif
     
     if (rankP == ROOT) {
         double diffTime = t1 - t0;
@@ -222,13 +212,10 @@ int main(int argc, char **argv) {
     
     free(un_chunk);
     free(u_chunk);
-    freeSpMat(&mat);
-
-#if MPI_RUN
+    
     MPI_Type_free(&planeXY);
     MPI_Type_free(&planeXZ);
     MPI_Finalize();
-#endif
     
     return 0;
 }

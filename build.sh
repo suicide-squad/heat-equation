@@ -79,9 +79,8 @@ fi
 
 if [ "$OUT_FILE" == "" ]
 then
-    OUT_FILE=euler3D.txt
+    OUT_FILE="res"
 fi
-
 
 Build() {
     if [ "$ARCH" = "fpga" ]; then
@@ -100,7 +99,7 @@ Build() {
 
     echo "C_COMPILER = $C_COMPILER"
     echo "CXX_COMPILER = $CXX_COMPILER"
-    cmake -DCMAKE_BUILD_TYPE=$BUILD_MODE -DCMAKE_C_COMPILER=$C_COMPILER -DCMAKE_CXX_COMPILER=$CXX_COMPILER -DARCH=$ARCH -DLIB=$LIB -DOUT_FILE=$OUT_FILE  $root_dir
+    cmake -DCMAKE_BUILD_TYPE=$BUILD_MODE -DCMAKE_C_COMPILER=$C_COMPILER -DCMAKE_CXX_COMPILER=$CXX_COMPILER -DARCH=$ARCH -DLIB=$LIB -DOUT_FILE=$OUT_FILE $root_dir
     make -j2
     cd $root_dir
 }

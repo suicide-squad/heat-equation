@@ -51,6 +51,11 @@ int main(int argc, char **argv) {
   TYPE * u = NULL, *u_chunk = NULL, *un_chunk = NULL;
   int NX, NY, NZ, NYr, NZr;
 
+#if ENABLE_PARALLEL
+    omp_set_num_threads((int)(argv[1]));
+    if (rankP == ROOT) printf("PARALLEL VERSION! Number of threads - %u\n", omp_get_max_threads());
+#endif
+
   if (rankP == ROOT) {
 
     int error = readSetting(pathSetting, &setting);
@@ -68,10 +73,6 @@ int main(int argc, char **argv) {
 
     sizeTime = (size_t) ((setting.TFINISH - setting.TSTART)/setting.dt);
 
-    #if ENABLE_PARALLEL
-      printf("PARALLEL VERSION!\n");
-      omp_set_num_threads(2);
-    #endif
     printf("TimeSize -\t%lu\n", sizeTime);
 
     TYPE dx = ABS(setting.XSTART - setting.XEND)/setting.NX;

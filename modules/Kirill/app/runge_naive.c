@@ -69,7 +69,12 @@ int main(int argc, char **argv) {
     
     TYPE *u = NULL, *u_chunk = NULL, *un_chunk = NULL;
     int NX, NY, NZ, NYr, NZr;
-    
+
+#if ENABLE_PARALLEL
+    omp_set_num_threads((int)(argv[1]));
+    if (rankP == ROOT) printf("PARALLEL VERSION! Number of threads - %u\n", omp_get_max_threads());
+#endif
+
     if (rankP == ROOT) {
         
         int error = readSetting(INPUT_EULER_SETTING_PATH, &setting);
@@ -87,10 +92,6 @@ int main(int argc, char **argv) {
         
         sizeTime = (size_t) ((setting.TFINISH - setting.TSTART) / setting.dt);
 
-#if ENABLE_PARALLEL
-        printf("PARALLEL VERSION!\n");
-        omp_set_num_threads(2);
-#endif
         printf("TimeSize -\t%lu\n", sizeTime);
         
         TYPE dx = ABS(setting.XSTART - setting.XEND) / setting.NX;
@@ -227,6 +228,7 @@ int main(int argc, char **argv) {
                      gridComm, &status[3]);
 
         // k1 = A*U
+        #pragma omp parallel for if (ENABLE_PARALLEL)
         for (int z = SHIFT; z < NZr + RESERVE - SHIFT; z++) {
             for (int y = SHIFT; y < NYr + RESERVE - SHIFT; y++) {
                 for (int x = SHIFT; x < NX - SHIFT; x++) {
@@ -240,6 +242,7 @@ int main(int argc, char **argv) {
         copyingBorders(k1, NX, NYr + RESERVE, NZr + RESERVE);
 
         // k2 = B*k1
+        #pragma omp parallel for if (ENABLE_PARALLEL)
         for (int z = SHIFT; z < NZr + RESERVE - SHIFT; z++) {
             for (int y = SHIFT; y < NYr + RESERVE - SHIFT; y++) {
                 for (int x = SHIFT; x < NX - SHIFT; x++) {
@@ -255,6 +258,7 @@ int main(int argc, char **argv) {
         copyingBorders(k2, NX, NYr + RESERVE, NZr + RESERVE);
 
         // k3 = B*k2
+        #pragma omp parallel for if (ENABLE_PARALLEL)
         for (int z = SHIFT; z < NZr + RESERVE - SHIFT; z++) {
             for (int y = SHIFT; y < NYr + RESERVE - SHIFT; y++) {
                 for (int x = SHIFT; x < NX - SHIFT; x++) {
@@ -270,6 +274,7 @@ int main(int argc, char **argv) {
         copyingBorders(k3, NX, NYr + RESERVE, NZr + RESERVE);
 
         // k4 = C*k3
+        #pragma omp parallel for if (ENABLE_PARALLEL)
         for (int z = SHIFT; z < NZr + RESERVE - SHIFT; z++) {
             for (int y = SHIFT; y < NYr + RESERVE - SHIFT; y++) {
                 for (int x = SHIFT; x < NX - SHIFT; x++) {

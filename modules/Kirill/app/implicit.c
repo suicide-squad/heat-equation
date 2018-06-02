@@ -69,6 +69,11 @@ int main(int argc, char **argv) {
     int NX, NY, NZ;
     int dim = 0;
     
+#if ENABLE_PARALLEL
+    omp_set_num_threads((int)(argv[1]));
+    if (rankP == ROOT) printf("PARALLEL VERSION! Number of threads - %u\n", omp_get_max_threads());
+#endif
+    
     if (rankP == ROOT) {
         Setting setting;
         int error;
@@ -87,10 +92,6 @@ int main(int argc, char **argv) {
         
         sizeTime = (size_t) ((setting.TFINISH - setting.TSTART) / setting.dt);
         
-#if ENABLE_PARALLEL
-        printf("PARALLEL VERSION!\n");
-        // omp_set_num_threads(1);
-#endif
         const TYPE dx = ABS(setting.XSTART - setting.XEND) / setting.NX;
         const TYPE dy = ABS(setting.YSTART - setting.YEND) / setting.NY;
         const TYPE dz = ABS(setting.ZSTART - setting.ZEND) / setting.NZ;

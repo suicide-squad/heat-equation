@@ -15,9 +15,11 @@ void initSpMat(SpMatrix *mat, int nz, int nRows) {
 }
 
 void freeSpMat(SpMatrix *mat) {
-    free(mat->value);
-    free(mat->col);
-    free(mat->rowIndex);
+    if (mat) {
+        free(mat->value);
+        free(mat->col);
+        free(mat->rowIndex);
+    }
 }
 
 inline void copyingBorders(TYPE *vec, int nx, int ny, int nz) {
@@ -359,13 +361,13 @@ void multMV(TYPE *result, SpMatrix mat, TYPE *vec, int nx, int ny, int nz, TYPE 
 #endif
 }
 
-void sumV(TYPE * result, const TYPE * const U, const TYPE * const k1,
-    const TYPE * const k2, const TYPE * const k3, const TYPE * const k4, const int N, const TYPE h) {
+void sumV(TYPE *result, const TYPE *const U, const TYPE *const k1,
+          const TYPE *const k2, const TYPE *const k3, const TYPE *const k4, const int N, const TYPE h) {
 #pragma omp parallel for if (ENABLE_PARALLEL)
     for (int i = 0; i < N; i++) {
         result[i] = U[i] + h * (k1[i] + 2.0 * k2[i] + 2.0 * k3[i] + k4[i]);
         // printf("%lf %lf %lf %lf\n", k1[i], k2[i], k3[i], k4[i]);
-
+        
     }
 }
 
