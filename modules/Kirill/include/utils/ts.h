@@ -16,7 +16,7 @@
 #define ENABLE_PARALLEL 0
 #define AVX2_RUN        0
 #define MKL_RUN         0
-#define CPU_CL_RUN      1
+#define CPU_CL_RUN      0
 #define GPU_CL_RUN      0
 #define FPGA_RUN        0
 #define MPI_RUN         1
@@ -24,10 +24,12 @@
 #define DOUBLE_TYPE
 
 // Load paths
-#define INPUT_EULER_SETTING_PATH    "/home/kirill/projects/heat-equation/initial/setting3.ini"
-#define INPUT_EULER_FUNCTION_PATH   "/home/kirill/projects/heat-equation/initial/function3.txt"
-#define RESULT_EULER_PATH           "/home/kirill/projects/heat-equation/result/Kirill/euler3D.txt"
-#define KERNEL_CL_PATH              "/home/kirill/projects/heat-equation/_build/modules/Kirill/src/kernel.cl"
+#define INPUT_EULER_SETTING_PATH    "setting3.ini"
+#define INPUT_EULER_FUNCTION_PATH   "function3.txt"
+#define RESULT_IEULER_PATH   		"/home/kirill/projects/heat-equation/result/Kirill/res.txt"
+#define RESULT_EULER_PATH           "/home/kirill/projects/heat-equation/result/Kirill/res.txt"
+#define RESULT_RUNGE_PATH           "/home/kirill/projects/heat-equation/result/Kirill/res.txt"
+#define KERNEL_CL_PATH              ""
 
 #if MPI_RUN
 #include <mpi.h>

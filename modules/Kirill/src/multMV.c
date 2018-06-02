@@ -359,10 +359,14 @@ void multMV(TYPE *result, SpMatrix mat, TYPE *vec, int nx, int ny, int nz, TYPE 
 #endif
 }
 
-void sumV(TYPE **result, TYPE *U, TYPE *k1, TYPE *k2, TYPE *k3, TYPE *k4, int N, TYPE h) {
+void sumV(TYPE * result, const TYPE * const U, const TYPE * const k1,
+    const TYPE * const k2, const TYPE * const k3, const TYPE * const k4, const int N, const TYPE h) {
 #pragma omp parallel for if (ENABLE_PARALLEL)
-    for (int i = 0; i < N; i++)
-        (*result)[i] = U[i] + h * (k1[i] + 2.0 * k2[i] + 2.0 * k3[i] + k4[i]);
+    for (int i = 0; i < N; i++) {
+        result[i] = U[i] + h * (k1[i] + 2.0 * k2[i] + 2.0 * k3[i] + k4[i]);
+        // printf("%lf %lf %lf %lf\n", k1[i], k2[i], k3[i], k4[i]);
+
+    }
 }
 
 void printSpMat(SpMatrix mat) {
@@ -393,4 +397,3 @@ void denseMult(TYPE **result, TYPE **mat, TYPE *vec, int dim) {
             (*result)[x] += mat[x][i] * vec[i];
     }
 }
-

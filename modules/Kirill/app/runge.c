@@ -26,9 +26,6 @@ const char pathSetting[] = "../../../../initial/setting3.ini";
 const char pathFunction[] = "../../../../initial/function3.txt";
 const char pathResult3D[] = "../../../../result/Kirill/runge3D_3.txt";
 
-//const char pathSetting[] = "setting3.ini";
-//const char pathFunction[] = "function3.txt";
-//const char pathResult3D[] = "res.txt";
 
 int main(int argc, char **argv) {
   int sizeP, rankP;
@@ -126,12 +123,18 @@ int main(int argc, char **argv) {
 
   //  SCATTER
   scatter_by_block(u, u_chunk, NX, NY, NYr, NZr, gridComm, RESERVE);
-  if (rankP == ROOT) printf("Scatter!\n");
+  // if (rankP == ROOT) printf("Scatter!\n");
 
   int nonZero = dimChunk*7;
-
+    
+    // Определения соседних ранков в декардовой решётке
+    int rank_left, rank_right, rank_down, rank_top;
+    MPI_Cart_shift(gridComm, 1, -1, &rank_left, &rank_right);
+    MPI_Cart_shift(gridComm, 0, 1, &rank_down, &rank_top);
+    
+    
   initSpMat(&A, nonZero, dimChunk);
-  createExplicitSpMatV2R(&A, coeffs, NX, NYr + RESERVE, NZr + RESERVE, gridComm);
+  createExplicitSpMatV2R(&A, coeffs, NX, NYr + RESERVE, NZr + RESERVE, rank_left, rank_right, rank_down, rank_top);
 
   coeffs[1] = dt*coeffs[1]*0.5;
   coeffs[2] = dt*coeffs[2]*0.5;
@@ -139,7 +142,7 @@ int main(int argc, char **argv) {
   coeffs[0] = 1.0 - 2.0*(coeffs[1] + coeffs[2] + coeffs[3]);
 
   initSpMat(&B, nonZero, dimChunk);
-  createExplicitSpMatV2R(&B, coeffs, NX, NYr + RESERVE, NZr + RESERVE, gridComm);
+  createExplicitSpMatV2R(&B, coeffs, NX, NYr + RESERVE, NZr + RESERVE, rank_left, rank_right, rank_down, rank_top);
 
   coeffs[1] = coeffs[1]*2.0;
   coeffs[2] = coeffs[2]*2.0;
@@ -147,7 +150,7 @@ int main(int argc, char **argv) {
   coeffs[0] = 1.0 - 2.0*(coeffs[1] + coeffs[2] + coeffs[3]);
 
   initSpMat(&C, nonZero, dimChunk);
-  createExplicitSpMatV2R(&C, coeffs, NX, NYr + RESERVE, NZr + RESERVE, gridComm);
+  createExplicitSpMatV2R(&C, coeffs, NX, NYr + RESERVE, NZr + RESERVE, rank_left, rank_right, rank_down, rank_top);
 
   //  printSpMat(A);
 
@@ -200,14 +203,10 @@ int main(int argc, char **argv) {
       }
     }
   }
-
-  // Определения соседних ранков в декардовой решётке
-  int rank_left, rank_right, rank_down, rank_top;
-  MPI_Cart_shift(gridComm, 1, -1, &rank_left, &rank_right);
-  MPI_Cart_shift(gridComm, 0, 1, &rank_down, &rank_top);
+  
   // *************************
 
- printf("rank - %d; left %d; right %d; top %d; down %d\n", rankP, rank_left, rank_right, rank_top, rank_down);
+ // printf("rank - %d; left %d; right %d; top %d; down %d\n", rankP, rank_left, rank_right, rank_top, rank_down);
 
   // Создание типа плоскости XY и XZ
 
@@ -254,19 +253,19 @@ int main(int argc, char **argv) {
                  gridComm, &status[3]);
 
     // k1 = A*U
-    multMV(k1, A, u_chunk, 0,0,0);
+    multMV(k1, A, u_chunk, 0,0,0, coeffs);
 
     // k2 = B*k1
-    multMV(k2, B, k1, 0,0,0);
+    multMV(k2, B, k1, 0,0,0, coeffs);
 
     // k3 = B*k2
-    multMV(k3, B, k2, 0,0,0);
+    multMV(k3, B, k2, 0,0,0, coeffs);
 
     // k4 = C*k3
-    multMV(k4, C, k3, 0,0,0);
+    multMV(k4, C, k3, 0,0,0, coeffs);
 
     // UNext = U + (k1 + k2*2 + k3*2 + k4)*h;
-    sumV(&un_chunk, u_chunk, k1, k2, k3, k4, dimChunk, h);
+    sumV(un_chunk, u_chunk, k1, k2, k3, k4, dimChunk, h);
 
     tmp = u_chunk;
     u_chunk = un_chunk;

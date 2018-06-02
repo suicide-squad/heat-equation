@@ -37,7 +37,7 @@ int main(int argc, char **argv) {
     MPI_Comm_size(MPI_COMM_WORLD, &sizeP);
     MPI_Comm_rank(MPI_COMM_WORLD, &rankP);
     
-    printf("MPI RUN. %d size processes\n", sizeP);
+    if (rankP == ROOT) printf("MPI RUN. %d size processes\n", sizeP);
     MPI_Comm gridComm;
 #endif
 
@@ -170,7 +170,7 @@ int main(int argc, char **argv) {
     un_chunk = tmp;
 #elif MPI_RUN
     // ОСНОВНЫЕ ВЫЧИСЛЕНИЯ
-    for (int t = 1; t <= 1; t++) {
+    for (int t = 1; t <= sizeTime; t++) {
         //  ОБМЕН ГРАНИЦ ПО Y И Z
         
         //    Передача влево по Y

@@ -40,9 +40,11 @@ if (LIB)
 endif()
 
 	#   Setting paths
-set(INPUT_EULER_SETTING_PATH    "${CMAKE_SOURCE_DIR}/initial/setting3.ini")
-set(INPUT_EULER_FUNCTION_PATH   "${CMAKE_SOURCE_DIR}/initial/function3.txt")
-set(RESULT_EULER_PATH           "${CMAKE_SOURCE_DIR}/result/Kirill/${OUT_FILE}")
+set(INPUT_EULER_SETTING_PATH    "setting3.ini")
+set(INPUT_EULER_FUNCTION_PATH   "function3.txt")
+set(RESULT_EULER_PATH           "${CMAKE_SOURCE_DIR}/result/Kirill/res.txt")
+set(RESULT_RUNGE_PATH           "${CMAKE_SOURCE_DIR}/result/Kirill/res.txt")
+set(RESULT_IEULER_PATH          "${CMAKE_SOURCE_DIR}/result/Kirill/res.txt")
 
 if(${FPGA_RUN})
 	set(KERNEL_CL_PATH    		"${CMAKE_BINARY_DIR}/modules/Kirill/src/kernel.aocx")
@@ -59,7 +61,7 @@ elseif(${FPGA_RUN})
 	find_package(AlteraCL)
 endif()
 
-if (NOT ${LIB} MATCHES "opencl")
+if (NOT ${LIB} MATCHES "opencl" OR {LIB} MATCHES "")
 	message(STATUS "MPI LIB")
 	find_package(MPI REQUIRED)
 	include_directories( ${MPI_INCLUDE_PATH} )

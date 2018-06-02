@@ -38,7 +38,8 @@ void naive_formula(TYPE *result,
                    const int sizeTime);
 
 // Суммирование векторов для рунге-кутты
-void sumV(TYPE **result, TYPE *U, TYPE *k1, TYPE *k2, TYPE *k3, TYPE *k4, int N, TYPE h);
+void sumV(TYPE * result, const TYPE * const U, const TYPE * const k1,
+    const TYPE * const k2, const TYPE * const k3, const TYPE * const k4, const int N, const TYPE h);
 
 void printSpMat(SpMatrix mat);
 TYPE procedure(SpMatrix mat, int i, int j);
