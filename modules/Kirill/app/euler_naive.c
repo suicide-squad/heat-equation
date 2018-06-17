@@ -50,7 +50,8 @@ int main(int argc, char **argv) {
     int NX, NY, NZ;
     
     #if ENABLE_PARALLEL
-        omp_set_num_threads((int)(argv[1]));
+        omp_set_num_threads(atoi(argv[1]));
+        
         if (rankP == ROOT) printf("PARALLEL VERSION! Number of threads - %u\n", omp_get_max_threads());
     #endif
 
@@ -204,7 +205,7 @@ int main(int argc, char **argv) {
         double diffTime = t1 - t0;
         printf("Time -\t%.3lf\n", diffTime);
         
-        writeFunction3D(RESULT_EULER_PATH, u, NX, NY, NZ, SHIFT);
+//        writeFunction3D(RESULT_EULER_PATH, u, NX, NY, NZ, SHIFT);
         
         printf("DONE!!!\n\n");
         free(u);

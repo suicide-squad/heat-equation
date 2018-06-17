@@ -11,8 +11,9 @@ def main():
     steps = np.array([1/8, 1/16, 1/32, 1/64, 1/128])
     times = np.array(range(3, 9))
 
-    fault = (np.loadtxt("faults_runge_naive.txt"))
+    # fault = (np.loadtxt("faults_runge_naive.txt"))
     # fault = (np.loadtxt("faults_implicit.txt"))
+    fault = (np.loadtxt("faults_euler.txt"))
     
     fault.shape = (len(steps), len(times))
 
@@ -34,9 +35,11 @@ def main():
     ax.plot_surface(x, y, fault, alpha=0.9, rstride=1, cstride=1, linewidth=0.5, cmap='jet')
     # ax.scatter(x, y, fault)
 
-    ax.set_xlabel('dt')
-    ax.set_ylabel('h')
-    ax.set_zlabel('fault')
+    ax.set_xlabel('шаг по времени')
+    ax.set_ylabel('шаг по пространству')
+    ax.set_zlabel('ошибка')
+    ax.set_zbound(0, 0.07)
+
     ax.xaxis.set_major_formatter(FuncFormatter(lambda x, y: '1e-{:d}'.format(int(x))))
 
     ax.view_init(azim=-30)

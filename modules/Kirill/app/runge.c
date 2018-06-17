@@ -52,7 +52,8 @@ int main(int argc, char **argv) {
   int NX, NY, NZ, NYr, NZr;
 
 #if ENABLE_PARALLEL
-    omp_set_num_threads((int)(argv[1]));
+        omp_set_num_threads(atoi(argv[1]));
+        
     if (rankP == ROOT) printf("PARALLEL VERSION! Number of threads - %u\n", omp_get_max_threads());
 #endif
 
@@ -286,7 +287,7 @@ int main(int argc, char **argv) {
     double diffTime = t1 - t0;
     printf("Time -\t%.3lf\n", diffTime);
 //    writeFunction1D(pathResult, u, NX, NY, 10, 10);
-    writeFunction3D(pathResult3D, u, NX, NY, NZ, SHIFT);
+//    writeFunction3D(pathResult3D, u, NX, NY, NZ, SHIFT);
     free(u);
   }
   MPI_Type_free(&planeXY);

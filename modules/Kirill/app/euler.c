@@ -53,7 +53,7 @@ int main(int argc, char **argv) {
     int NX, NY, NZ;
     
     #if ENABLE_PARALLEL
-        omp_set_num_threads((int)(argv[1]));
+        omp_set_num_threads(atoi(argv[1]));
         if (rankP == ROOT) printf("PARALLEL VERSION! Number of threads - %u\n", omp_get_max_threads());
     #endif
 

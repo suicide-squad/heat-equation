@@ -53,9 +53,12 @@ case $COMPILER in
         ;;
 esac
 
+ARCH=cpu
+
 if [ "$ARCH" == "gpu" ] || [ "$ARCH" == "fpga" ]
 then
     LIB=opencl
+    ARCH=gpu
 elif [ "$ARCH" == "cpu" ] && [ "$LIB" == "mkl" ] && [ "$C_COMPILER" == "icc" ]
 then
     LIB=mkl
@@ -99,7 +102,7 @@ Build() {
 
     echo "C_COMPILER = $C_COMPILER"
     echo "CXX_COMPILER = $CXX_COMPILER"
-    cmake -DCMAKE_BUILD_TYPE=$BUILD_MODE -DCMAKE_C_COMPILER=$C_COMPILER -DCMAKE_CXX_COMPILER=$CXX_COMPILER -DARCH=$ARCH -DLIB=$LIB -DOUT_FILE=$OUT_FILE $root_dir
+    cmake -DCMAKE_BUILD_TYPE=$BUILD_MODE -DCMAKE_C_COMPILER=$C_COMPILER -DCMAKE_CXX_COMPILER=$CXX_COMPILER -DARCH=${ARCH} -DLIB=$LIB -DOUT_FILE=$OUT_FILE $root_dir
     make -j2
     cd $root_dir
 }

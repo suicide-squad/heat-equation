@@ -19,7 +19,7 @@
 #include "parser.h"
 #include "sgpu.h"
 
-#define EPS 1e-14
+#define EPS 1e-10
 
 #define DIM_CART 2
 #define SHIFT 1
@@ -27,11 +27,12 @@
 
 #define IND(x, y, z) ((x) + (y)*NX + (z)*NX*(NYr + RESERVE))
 
-static inline bool dist(const TYPE * const x1, const TYPE * const x2, const int N) {
+
+static inline int dist(const TYPE * const x1, const TYPE * const x2, const int N) {
     for (int i = 0; i < N; i++)
         if (ABS(x1[i] - x2[i]) > EPS)
-            return false;
-    return true;
+            return 0;
+    return 1;
 }
 
 int main(int argc, char **argv) {
@@ -70,10 +71,10 @@ int main(int argc, char **argv) {
     int dim = 0;
     
 #if ENABLE_PARALLEL
-    omp_set_num_threads((int)(argv[1]));
+    omp_set_num_threads(atoi(argv[1]));
     if (rankP == ROOT) printf("PARALLEL VERSION! Number of threads - %u\n", omp_get_max_threads());
 #endif
-    
+
     if (rankP == ROOT) {
         Setting setting;
         int error;
@@ -165,7 +166,8 @@ int main(int argc, char **argv) {
     TYPE * x1 = (TYPE *) aligned_alloc(ALIGNMENT, sizeof(TYPE) * dimChunk);
     TYPE * x2 = (TYPE *) aligned_alloc(ALIGNMENT, sizeof(TYPE) * dimChunk);
     
-    // int countIter = 0;
+    size_t countIter = 0u;
+    int isWhile;
 
     copyingBorders(u_chunk, NX, NYr + RESERVE, NZr + RESERVE);
 
@@ -175,7 +177,7 @@ int main(int argc, char **argv) {
         printf("START!\n");
         t0 = WTIME();
     }
-    for (int t = 1; t <= 100; t++) {
+    for (int t = 1; t <= sizeTime; t++) {
 
         //    Передача влево по Y
         MPI_Sendrecv(&u_chunk[IND(0, NYr, 0)], 1, planeXY, rank_left, 0,
@@ -196,25 +198,26 @@ int main(int argc, char **argv) {
         memcpy(x1, u_chunk, dimChunk * sizeof(TYPE));
         
         do {
-            
             multMV(x2, mat, x1, NX, (NYr + RESERVE), (NZr + RESERVE), coeffs);
-            
+
+            double localSum = 0.0;
             for (int z = 1; z < NZr + RESERVE - 1; z++) {
                 for (int y = 1; y < NYr + RESERVE - 1; y++) {
                     for (int x = 1; x < NX - 1; x++) {
                         x2[IND(x, y, z)] = (u_chunk[IND(x, y, z)] + x2[IND(x, y, z)]) * k;
-                       if (x == 1)
-                           x2[IND(x - 1, y, z)] = x2[IND(x, y, z)];
-                       if (x == NX - 2)
-                           x2[IND(x + 1, y, z)] = x2[IND(x, y, z)];
-                       if (y == 1)
-                           x2[IND(x, y - 1, z)] = x2[IND(x, y, z)];
-                       if (y == NY - 2)
-                           x2[IND(x, y + 1, z)] = x2[IND(x, y, z)];
-                       if (z == 1)
-                           x2[IND(x, y, z - 1)] = x2[IND(x, y, z)];
-                       if (z == NZ - 2)
-                           x2[IND(x, y, z + 1)] = x2[IND(x, y, z)];
+
+                        if (x == 1)
+                            x2[IND(x - 1, y, z)] = x2[IND(x, y, z)];
+                        if (x == NX - 2)
+                            x2[IND(x + 1, y, z)] = x2[IND(x, y, z)];
+                        if (y == 1)
+                            x2[IND(x, y - 1, z)] = x2[IND(x, y, z)];
+                        if (y == NY - 2)
+                            x2[IND(x, y + 1, z)] = x2[IND(x, y, z)];
+                        if (z == 1)
+                            x2[IND(x, y, z - 1)] = x2[IND(x, y, z)];
+                        if (z == NZ - 2)
+                            x2[IND(x, y, z + 1)] = x2[IND(x, y, z)];
                     }
                 }
             }
@@ -222,16 +225,17 @@ int main(int argc, char **argv) {
             TYPE * tmp = x1;
             x1 = x2;
             x2 = tmp;
+
+            int isEps = dist(x1, x2, dimChunk);
+
+            MPI_Allreduce(&isEps, &isWhile, 1, MPI_INT, MPI_LOR, gridComm);
             
-            // countIter++;
+           if (rankP == ROOT) countIter++;
             
-        } while (!dist(x1, x2, dimChunk));
+        } while (!isWhile);
         
         // u_chunk = x1;
-                memcpy(u_chunk, x1 , dimChunk * sizeof(TYPE));
-
-
-        
+        memcpy(u_chunk, x1 , dimChunk * sizeof(TYPE));
     }
     
     //  *******************
@@ -246,6 +250,7 @@ int main(int argc, char **argv) {
     if (rankP == ROOT) {
         double diffTime = t1 - t0;
         printf("Time -\t%.3lf\n", diffTime);
+        printf("Count iterations -\t%lu\n", countIter);
         
         writeFunction3D(RESULT_IEULER_PATH, u, NX, NY, NZ, SHIFT);
         

@@ -55,9 +55,10 @@ void multMV_default(TYPE *result, SpMatrix mat, TYPE *vec) {
 inline void multMV_AVX_v2(TYPE* result, SpMatrix mat, TYPE* vec, int nx, int ny, int nz) {
  __m256d mask = _mm256_setr_pd(-1,-1,-1, 0);
  __m256d zero =_mm256_setzero_pd();
-//  #pragma omp parallel for if (ENABLE_PARALLEL)
   copyingBorders(vec, nx, ny, nz);
 
+
+  #pragma omp parallel for if (ENABLE_PARALLEL)
   for (int z = 1; z < nz - 1; z++) {
     for (int y = 1; y < ny - 1; y++) {
       for (int x = 1; x < nx - 1; x++) {
@@ -93,6 +94,8 @@ inline void multMV_AVX_1(TYPE* result, SpMatrix mat, TYPE* vec, int nx, int ny, 
   copyingBorders(vec, nx, ny, nz);
 
   val += nx*ny * NR;   result += nx*ny;   vec2 += nx*ny;
+
+#pragma omp parallel for if (ENABLE_PARALLEL)
   for (int z = 1; z < nz - 1; z++) {
     val += nx * NR;   result += nx;   vec2 += nx;
     for (int y = 1; y < ny - 1; y++) {
@@ -157,6 +160,8 @@ inline void multMV_AVX_optimize(TYPE* result, SpMatrix mat, TYPE* vec, int nx, i
   copyingBorders(vec, nx, ny, nz);
 
   val += nx*ny * NR;   result += nx*ny;   vec2 += nx*ny;
+  
+  #pragma omp parallel for if (ENABLE_PARALLEL)
   for (int z = 1; z < nz - 1; z++) {
     val += nx * NR;   result += nx;   vec2 += nx;
     for (int y = 1; y < ny - 1; y++) {
@@ -253,7 +258,7 @@ void multMV_altera(TYPE* result, SpMatrix mat, TYPE* vec, int sizeTime ) {
 //  size_t localWorkSize = 1;
 
   cl_mem tmp;
-  for (int i = 0; i < sizeTime; i++) {
+  for (int i = 0; i <= sizeTime; i++) {
     err = clEnqueueNDRangeKernel(commandQueue, kernel, 1, NULL, globalWorkSize, localWorkSize2, 0, NULL, NULL);
     checkError(err,  "clEnqueueNDRangeKernel");
 
@@ -354,8 +359,8 @@ void multMV(TYPE *result, SpMatrix mat, TYPE *vec, int nx, int ny, int nz, TYPE 
   #endif
 #elif AVX2_RUN
     // multMV_AVX_1(result,mat, vec, nx, ny, nz);
-    multMV_AVX_v2(result,mat, vec, nx, ny, nz);
-       // multMV_AVX_optimize(result,mat, vec, nx, ny, nz, coeff);
+    // multMV_AVX_v2(result,mat, vec, nx, ny, nz);
+       multMV_AVX_optimize(result,mat, vec, nx, ny, nz, coeff);
 #else
     multMV_default(result, mat, vec);
 #endif

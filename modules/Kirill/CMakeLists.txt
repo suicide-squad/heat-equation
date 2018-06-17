@@ -21,6 +21,9 @@ message(STATUS "${LIB}")
 message(STATUS "------ARCH-----")
 message(STATUS "${ARCH}")
 
+set(LIB  "avx")
+
+
 if (LIB)
 	if (${LIB} MATCHES "mkl")
 		set(MKL_RUN      1)
@@ -81,6 +84,7 @@ elseif(${MKL_RUN} AND MKL_FOUND)
 elseif(${GPU_CL_RUN} AND OPENCL_FOUND)
     set(MKL_RUN, 0)
 	set(GPU_CL_RUN, 1)
+    include_directories(${OPENCL_INCLUDE_DIRS})
 	message(STATUS "GPU_CL_RUN")
 elseif(${CPU_CL_RUN} AND OPENCL_FOUND)
 	set(MKL_RUN, 0)
