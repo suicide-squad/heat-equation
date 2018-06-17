@@ -1,3 +1,6 @@
 # Directory
-build/
+_build/
+build_clion_release/
+cmake-build-debug
 .idea/
+result/Kirill

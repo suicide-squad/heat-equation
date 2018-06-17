@@ -181,16 +181,13 @@ void createExplicitSpMatV2(SpMatrix *mat, TYPE coeffs[4], int nx, int ny, int nz
   }
 }
 
-void createExplicitSpMatV2R(SpMatrix* mat, TYPE* coeffs, int nx, int ny, int nz, MPI_Comm comm) {
+void createExplicitSpMatV2R(SpMatrix* mat, const TYPE* const coeffs, const int nx, const int ny, const int nz,
+                            const int rank_left, const int rank_right, const int rank_down, const int rank_top) {
   int index = 0, k = 0;
   int shiftIndexX=0, shiftIndexY=0, shiftIndexZ=0;
   int shift;
   mat->rowIndex[0] = 0;
-
-  // Определения соседних ранков в декардовой решётке
-  int rank_left, rank_right, rank_down, rank_top;
-  MPI_Cart_shift(comm, 1, 1, &rank_left, &rank_right);
-  MPI_Cart_shift(comm, 0, 1, &rank_down, &rank_top);
+  
 
   int realIndex;
   for (int z = 0; z < nz; z++) {

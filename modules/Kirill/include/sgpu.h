@@ -20,8 +20,9 @@ typedef enum {
 
 void get_blocks(int *blockY, int *blockZ, int sizeProc);
 
+#if MPI_RUN
 void scatter_by_block(TYPE* u, TYPE* u_chunk, int nx, int ny, int nyr, int nzr, MPI_Comm gridComm, int reserve);
 void gather_by_block(TYPE* u, TYPE* u_chunk, int nx, int ny, int nyr, int nzr, int reserve, MPI_Comm gridComm);
-
+#endif
 
 #endif //HEAT_EQUATION_SGPU_H

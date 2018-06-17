@@ -5,6 +5,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 
+np.set_printoptions(threshold=np.inf)
+
+
 def buildPlot3D(ax, title, u, rstride, cstride, usmin, usmax,
                  x, y, z, xmax, xmin, ymax, ymin, zmax, zmin):
     norm = colors.Normalize(vmin=usmin, vmax=usmax, clip=True)
@@ -15,29 +18,29 @@ def buildPlot3D(ax, title, u, rstride, cstride, usmin, usmax,
 
     X, Y = np.meshgrid(x, y)
 
-    ax.plot_surface(X, Y, zmax, alpha=alpha, facecolors=cm.jet(norm(u[:][:][-1])),
+    ax.plot_surface(X, Y, np.atleast_2d(zmax), alpha=alpha, facecolors=cm.jet(norm(u[0,:,:])),
                     rstride=rstride, cstride=cstride, linewidth=linewidth,
                     antialiased=antialiased, shade=shade)
-    ax.plot_surface(X, Y, zmin, alpha=alpha, facecolors=cm.jet(norm(u[:][:][0])),
+    ax.plot_surface(X, Y, np.atleast_2d(zmin), alpha=alpha, facecolors=cm.jet(norm(u[-1,:,:])),
                     rstride=rstride, cstride=cstride, linewidth=linewidth,
                     antialiased=antialiased, shade=shade)
 
     X, Z = np.meshgrid(x, z)
 
-    ax.plot_surface(X, ymax, Z, alpha=alpha, facecolors=cm.jet(norm(u[:][-1][:])),
+    ax.plot_surface(X, ymax, Z, alpha=alpha, facecolors=cm.jet(norm(u[:,0,:])),
                     rstride=rstride, cstride=cstride, linewidth=linewidth,
                     antialiased=antialiased, shade=shade)
-    ax.plot_surface(X, ymin, Z, alpha=0.7, facecolors=cm.jet(norm(u[:][0][:])),
+    ax.plot_surface(X, ymin, Z, alpha=0.7, facecolors=cm.jet(norm(u[:,-1,:])),
                     rstride=rstride, cstride=cstride, linewidth=linewidth,
                     antialiased=antialiased, shade=shade)
 
     Y, Z = np.meshgrid(y, z)
 
-    ax.plot_surface(xmax, Y, Z, alpha=alpha, facecolors=cm.jet(norm(u[-1][:][:])),
+    ax.plot_surface(xmax, Y, Z, alpha=alpha, facecolors=cm.jet(norm(u[:,:,0])),
                     rstride=rstride, cstride=cstride, linewidth=linewidth,
                     antialiased=antialiased, shade=shade)
-    ax.plot_surface(xmin, Y, Z, alpha=alpha, facecolors=cm.jet(norm(u[0][:][:])),
-                               rstride=rstride, cstride=cstride, linewidth=linewidth,
+    ax.plot_surface(xmin, Y, Z, alpha=alpha, facecolors=cm.jet(norm(u[:,:,-1])),
+                    rstride=rstride, cstride=cstride, linewidth=linewidth,
                     antialiased=antialiased, shade=shade)
 
     # plt.title(title)
